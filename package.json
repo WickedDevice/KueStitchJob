@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "kue": "^0.11.5"
+    "jStat": "^1.5.3",
+    "kue": "^0.11.5",
+    "moment": "^2.16.0"
   }
 }

@@ -2,6 +2,8 @@ var kue = require('kue')
   , queue = kue.createQueue();
 var fs = require('fs');
 path = require('path');
+var moment = require('moment');
+var jStat = require('jStat').jStat;
 
 let getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter( (file) => {
@@ -54,6 +56,48 @@ let getEggModelType = (serialNumber, extantTopics) => {
   return "unknown";
 };
 
+let determineTimebase = (serialNumber, items, uniqueTopics) => {
+  let temperatureTopic = null;
+  if(uniqueTopics.indexOf("/orgs/wd/aqe/temperature") >= 0){
+    temperatureTopic = "/orgs/wd/aqe/temperature";
+  }
+  else if(uniqueTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0){
+    temperatureTopic = "/orgs/wd/aqe/temperature/" + serialNumber;
+  }
+  
+  if(!temperatureTopic){
+    return null;
+  }
+
+  let timeDiffs = [];
+  let lastTime = null;
+
+  items.filter( (item) => {
+    return item.topic == temperatureTopic;
+  }).forEach( (item) => {
+    if(!lastTime){
+      lastTime = moment(item.timestamp);
+    }
+    else{
+      let currentTimestamp = moment(item.timestamp);
+      timeDiffs.push(currentTimestamp.diff(lastTime, "milliseconds"));
+      lastTime = currentTimestamp;
+    }
+  });
+
+  // determine the standard deviation of the time differences
+  // filter out any that are outside 1 standard deviation from the mean
+  let stdev = jStat.stdev(timeDiffs);
+  let mean = jStat.mean(timeDiffs);
+  // remove outliers
+  timeDiffs = timeDiffs.filter( (diff) => {
+    return (diff >= mean - stdev) && (diff <= mean + stdev);
+  });
+
+  // recompute the mean
+  return jStat.mean(timeDiffs);
+};
+
 queue.process('stitch', (job, done) => {
   // the download job is going to need the following parameters
   //    save_path - the full path to where the result should be saved
@@ -86,11 +130,15 @@ queue.process('stitch', (job, done) => {
     let modelType = getEggModelType(dir, uniqueTopics);
     job.log(`Egg Serial Number ${dir} is ${modelType} type`); 
 
+    let timeBase = determineTimebase(dir, items, uniqueTopics);
+    job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
+
     // 3. for each folder in save_path, list the files in that folder
     //    load them into memory one at a time, and process records in each file
     //    generating one csv record at a time and appending to the csv file
     //    progressively as you go
-  
+        
+ 
   });
 
   done();
