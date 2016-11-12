@@ -9,6 +9,50 @@ let getDirectories = (srcpath) => {
   });
 }
 
+let known_topic_prefixes = [
+  "/orgs/wd/aqe/temperature",
+  "/orgs/wd/aqe/humidity",
+  "/orgs/wd/aqe/no2",
+  "/orgs/wd/aqe/co",
+  "/orgs/wd/aqe/so2",
+  "/orgs/wd/aqe/o3",
+  "/orgs/wd/aqe/particulate",
+  "/orgs/wd/aqe/co2",
+  "/orgs/wd/aqe/voc"
+];
+
+let getEggModelType = (serialNumber, extantTopics) => {
+  if(extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0){
+    if(extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0){
+      return "model A";
+    }
+    else if(extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0){
+      return "model J";
+    }
+    else {
+      return "uknown no2";
+    }
+  }
+  else if(extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0){ 
+    if(extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0){
+      return "model B";
+    }
+    else{
+      return "unknown so2";
+    }
+  }
+  else if(extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0){
+    return "model C";
+  }
+  else if(extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0){
+    return "model D";
+  }
+  else if(extantTopics.indexOf("/orgs/wd/aqe/voc") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/voc/" + serialNumber) >= 0){
+    return "model E";
+  }
+
+  return "unknown";
+};
 
 queue.process('stitch', (job, done) => {
   // the download job is going to need the following parameters
@@ -22,16 +66,32 @@ queue.process('stitch', (job, done) => {
     fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.csv`, 'w'));
   });
 
-  // 2. for each folder in save_path, analyze file 1.json to infer the type of Egg
-  //    model, generate an appropriate header row and append it to the csv file, 
-  //    and create a map of topic string to CSV index based on the determined model
-  
+  // 2. for each folder in save_path, analyze file "1.json" to infer the type of Egg
+  //    model, generate an appropriate header row and append it to the csv file, and 
+  //    save the egg model in a variable for later dependencies, and establish the
+  //    time base of the data in the file. In order to determine the time base,
+  //    analyze the time differences between adjacent messages on the temperature
+  //    topic (which all Eggs have)
+  getDirectories(job.data.save_path).forEach( (dir) => {
+    let items = require(`${job.data.save_path}/${dir}/1.json`);
 
-  // 3. for each folder in save_path, list the files in that folder
-  //    load them into memory one at a time, and process records in each file
-  //    generating one csv record at a time and appending to the csv file
-  //    progressively as you go
+    // collect the unique topics in the first batch of messages
+    let uniqueTopics = {};
+    items.forEach( (item) => {
+      uniqueTopics[item.topic] = 1;
+    });
+    uniqueTopics = Object.keys(uniqueTopics);
+    
+    job.log(uniqueTopics);
+    let modelType = getEggModelType(dir, uniqueTopics);
+    job.log(`Egg Serial Number ${dir} is ${modelType} type`); 
+
+    // 3. for each folder in save_path, list the files in that folder
+    //    load them into memory one at a time, and process records in each file
+    //    generating one csv record at a time and appending to the csv file
+    //    progressively as you go
   
+  });
 
   done();
 });
