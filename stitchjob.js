@@ -130,6 +130,8 @@ queue.process('stitch', (job, done) => {
     let modelType = getEggModelType(dir, uniqueTopics);
     job.log(`Egg Serial Number ${dir} is ${modelType} type`); 
 
+    // TODO: append the header row for this model to the CSV file
+
     let timeBase = determineTimebase(dir, items, uniqueTopics);
     job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
 
@@ -137,8 +139,26 @@ queue.process('stitch', (job, done) => {
     //    load them into memory one at a time, and process records in each file
     //    generating one csv record at a time and appending to the csv file
     //    progressively as you go
-        
- 
+    let currentRecord = [];
+    fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
+      let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+      require(fullPathToFile).forEach( (datum, index) => {
+        if(index == 0){ 
+          // special case, use this timestamp
+          
+        }
+        // TODO: determine if this datum fits into the timeframe of the current record
+        //       if it does, then just add it
+
+        // TODO: if it doesn't, then append the stringified current record to the csv file
+        //       then reset the current record
+        //       and add this datum to it, and use it's timestamp
+
+      });            
+    });    
+
+    // TODO: if the current_record is not blank, then add it to the CSV file
+
   });
 
   done();
