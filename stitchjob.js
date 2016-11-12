@@ -98,6 +98,49 @@ let determineTimebase = (serialNumber, items, uniqueTopics) => {
   return jStat.mean(timeDiffs);
 };
 
+let appendHeaderRow = (model, filepath, temperatureUnits) => {
+  if(!temperatureUnits){
+    temperatureUnits = "???";
+  }
+
+  let headerRow = `timestamp,temperature[${temperatureUnits}],humidity[%],`;
+
+  switch(model){
+  case "model A":
+    headerRow += "no2[ppb],co[ppm],no2[V],co[V]";
+    break;
+  case "model B":
+    headerRow += "so2[ppb],o3[ppb],so2[V],o3[V]";
+    break;
+  case "model C":
+    headerRow += "pm[ug/m^3],pm[V]";
+    break;
+  case "model D":
+    headerRow += "co2[ppm]";
+    break;
+  case "model E":
+    headerRow += "co2[ppm],tvoc[ppb],resistance[ohm]";
+    break;
+  case "model J":
+    headerRow += "no2[ppb],o3[ppb],no2_we[V],no2_aux[V],o3[V]";
+    break;
+  default:
+    break;
+  }  
+
+  headerRow += ",latitude[deg],longitude[deg],altitude[deg]\r\n";
+  fs.appendFileSync(filepath, headerRow);
+};   
+
+let getTemperatureUnits = (items) => {
+  for(let ii = 0; ii < items.length; ii++){
+    let item = items[ii];
+    if(item.topic.indexOf("temperature") >= 0){
+      return item["converted-units"];
+    }
+  };
+};
+
 queue.process('stitch', (job, done) => {
   // the download job is going to need the following parameters
   //    save_path - the full path to where the result should be saved
@@ -130,7 +173,8 @@ queue.process('stitch', (job, done) => {
     let modelType = getEggModelType(dir, uniqueTopics);
     job.log(`Egg Serial Number ${dir} is ${modelType} type`); 
 
-    // TODO: append the header row for this model to the CSV file
+    let temperatureUnits = getTemperatureUnits(items);
+    appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
 
     let timeBase = determineTimebase(dir, items, uniqueTopics);
     job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
