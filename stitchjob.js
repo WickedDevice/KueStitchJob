@@ -23,6 +23,204 @@ let known_topic_prefixes = [
   "/orgs/wd/aqe/voc"
 ];
 
+let invalid_value_string = "---";
+
+let valueOrInvalid = (value) => {
+  if(value === null || value === undefined){
+    return invalid_value_string;
+  }
+
+  return value;
+}
+
+let addMessageToRecord = (message, model, compensated, instantaneous, record) => {
+  if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
+    record[0] = message.timestamp; 
+    if(!compensated && !instantaneous){
+      record[1] = valueOrInvalid(message['raw-value']);       
+    }
+    else if(compensated && !instantaneous){
+      record[1] = valueOrInvalid(message['converted-value']);
+    }
+    else if(!compensated && instantaneous){
+      record[1] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+    }
+    else if(compensated && instantaneous){
+      record[1] = valueOrInvalid(message['converted-value']);
+    }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0){
+    if(!compensated && !instantaneous){
+      record[2] = valueOrInvalid(message['raw-value']);
+    }
+    else if(compensated && !instantaneous){
+      record[2] = valueOrInvalid(message['converted-value']);
+    }
+    else if(!compensated && instantaneous){
+      record[2] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+    }
+    else if(compensated && instantaneous){
+      record[2] = valueOrInvalid(message['converted-value']);
+    }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/no2") >= 0){
+    if(model == 'model A'){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);  
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    } else if(model == 'model J'){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['converted-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+        record[6] = valueOrInvalid(message['raw-value2']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+        record[6] = valueOrInvalid(message['raw-value2']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['converted-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value2'] || message['raw-value2']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value2'] || message['raw-value2']);
+      }
+    }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/co") >= 0){
+      if(!compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/so2") >= 0){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/o3") >= 0){
+    if(model == 'model B'){
+      if(!compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    } else if(model == 'model J'){
+      if(!compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['converted-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[4] = valueOrInvalid(message['converted-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0){
+    if(!compensated && !instantaneous){
+
+    }
+    else if(compensated && !instantaneous){
+
+    }
+    else if(!compensated && instantaneous){
+
+    }
+    else if(compensated && instantaneous){
+
+    }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/co2") >= 0){
+    if(!compensated && !instantaneous){
+
+    }
+    else if(compensated && !instantaneous){
+
+    }
+    else if(!compensated && instantaneous){
+
+    }
+    else if(compensated && instantaneous){
+
+    }
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/voc") >= 0){
+    if(!compensated && !instantaneous){
+
+    }
+    else if(compensated && !instantaneous){
+
+    }
+    else if(!compensated && instantaneous){
+
+    }
+    else if(compensated && instantaneous){
+
+    }
+  }
+};
+
 let getEggModelType = (serialNumber, extantTopics) => {
   if(extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0){
     if(extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0){
@@ -191,8 +389,10 @@ queue.process('stitch', (job, done) => {
           // special case, use this timestamp
           
         }
+
         // TODO: determine if this datum fits into the timeframe of the current record
         //       if it does, then just add it
+
 
         // TODO: if it doesn't, then append the stringified current record to the csv file
         //       then reset the current record
