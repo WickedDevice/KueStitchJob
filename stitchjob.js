@@ -266,6 +266,25 @@ let getEggModelType = (serialNumber, extantTopics) => {
   return "unknown";
 };
 
+let getRecordLengthByModelType = (modelType) => {
+  switch(modelType){
+  case 'model A':
+    return 10;    
+  case 'model B':
+    return 10;
+  case 'model C':
+    return 8;
+  case 'model D':
+    return 7;
+  case 'model E':
+    return 9;
+  case 'model J':
+    return 11;
+  default:
+    return 6;
+  }
+}
+
 let determineTimebase = (serialNumber, items, uniqueTopics) => {
   let temperatureTopic = null;
   if(uniqueTopics.indexOf("/orgs/wd/aqe/temperature") >= 0){
@@ -351,6 +370,17 @@ let getTemperatureUnits = (items) => {
   };
 };
 
+let convertRecordToString = (record, modelType) => {
+   let r = record.slice();   
+   // TODO: adjust timezone for requested timezone here?
+   for(let i = 0; i < getRecordLengthByModelType(modelType); i++){
+     if(r[i] === undefined){
+       r[i] = invalid_value_string;
+     }
+   }
+   return r.join(",") + "\r\n";
+};
+
 queue.process('stitch', (job, done) => {
   // the download job is going to need the following parameters
   //    save_path - the full path to where the result should be saved
@@ -399,21 +429,29 @@ queue.process('stitch', (job, done) => {
       require(fullPathToFile).forEach( (datum, index) => {
         if(index == 0){ 
           // special case, use this timestamp
-          
+          currentRecord[0] = datum.timestamp;           
         }
 
-        // TODO: determine if this datum fits into the timeframe of the current record
-        //       if it does, then just add it
+        let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
 
-
-        // TODO: if it doesn't, then append the stringified current record to the csv file
-        //       then reset the current record
-        //       and add this datum to it, and use it's timestamp
-
+        // if datum falls within current record, then just add it
+        if(timeToPreviousMessage < timeBase / 2){
+          addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+        }
+        // if it doesn't, then append the stringified current record to the csv file
+        // then reset the current record
+        // and add this datum to it, and use it's timestamp
+        else {
+          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType));
+          currentRecord = [];
+          currentRecord[0] = datum.timestamp;
+          addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);        
+        }
       });            
     });    
 
-    // TODO: if the current_record is not blank, then add it to the CSV file
+    // make sure to commit the last record to file in whatever stat it's in
+    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType));    
 
   });
 
