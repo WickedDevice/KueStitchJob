@@ -459,6 +459,7 @@ queue.process('stitch', (job, done) => {
   let job2 = queue.create('zip', {
         title: 'zipping folder ' + job.data.save_path
         , serials: job.data.serials.slice()
+        , original_serials: job.data.original_serials.slice()
         , save_path: job.data.save_path
         , user_id: job.data.user_id
         , email: job.data.email
