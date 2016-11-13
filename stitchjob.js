@@ -370,9 +370,9 @@ let getTemperatureUnits = (items) => {
   };
 };
 
-let convertRecordToString = (record, modelType) => {
+let convertRecordToString = (record, modelType, utcOffset) => {
    let r = record.slice();   
-   // TODO: adjust timezone for requested timezone here?
+   r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
    for(let i = 0; i < getRecordLengthByModelType(modelType); i++){
      if(r[i] === undefined){
        r[i] = invalid_value_string;
@@ -442,7 +442,7 @@ queue.process('stitch', (job, done) => {
         // then reset the current record
         // and add this datum to it, and use it's timestamp
         else {
-          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType));
+          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
           currentRecord = [];
           currentRecord[0] = datum.timestamp;
           addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);        
