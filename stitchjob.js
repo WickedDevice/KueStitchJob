@@ -455,6 +455,20 @@ queue.process('stitch', (job, done) => {
 
   });
 
+  // before declaring we are done, create a job to zip the results up
+  let job2 = queue.create('zip', {
+        title: 'zipping folder ' + job.data.save_path
+        , serials: job.data.serials.slice()
+        , save_path: job.data.save_path
+        , user_id: job.data.user_id
+        , email: job.data.email
+        , zipfilename: job.data.zipfilename
+      })
+      .priority('high')
+      .attempts(10)
+      .backoff({delay: 60*1000, type:'exponential'})
+      .save();
+
   done();
 });
 
