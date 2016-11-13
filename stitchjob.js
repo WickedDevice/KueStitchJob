@@ -451,7 +451,7 @@ queue.process('stitch', (job, done) => {
     });    
 
     // make sure to commit the last record to file in whatever stat it's in
-    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType));    
+    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));    
 
   });
 
