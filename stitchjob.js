@@ -179,44 +179,56 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0){
     if(!compensated && !instantaneous){
-
+      record[3] = valueOrInvalid(message['compensated-value']);
+      record[4] = valueOrInvalid(message['raw-value']);      
     }
     else if(compensated && !instantaneous){
-
+      record[3] = valueOrInvalid(message['compensated-value']);
+      record[4] = valueOrInvalid(message['raw-value']);
     }
     else if(!compensated && instantaneous){
-
+      record[3] = valueOrInvalid(message['compensated-value']);
+      record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
     }
     else if(compensated && instantaneous){
-
+      record[3] = valueOrInvalid(message['compensated-value']);
+      record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co2") >= 0){
     if(!compensated && !instantaneous){
-
+      record[3] = valueOrInvalid(message['raw-instant-value']);
     }
     else if(compensated && !instantaneous){
-
+      record[3] = valueOrInvalid(message['compensated-value']);
     }
     else if(!compensated && instantaneous){
-
+      record[3] = valueOrInvalid(message['raw-instant-value']);
     }
     else if(compensated && instantaneous){
-
+      record[3] = valueOrInvalid(message['compensated-value']);
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/voc") >= 0){
     if(!compensated && !instantaneous){
-
+      record[3] = valueOrInvalid(messgae['converted-co2']);
+      record[4] = valueOrInvalid(messgae['converted-tvoc']);
+      record[5] = valueOrInvalid(messgae['converted-resistance']);
     }
     else if(compensated && !instantaneous){
-
+      record[3] = valueOrInvalid(messgae['compensated-co2']);
+      record[4] = valueOrInvalid(messgae['compensated-tvoc']);
+      record[5] = valueOrInvalid(messgae['compensated-resistance']);
     }
     else if(!compensated && instantaneous){
-
+      record[3] = valueOrInvalid(messgae['raw-instant-co2']);
+      record[4] = valueOrInvalid(messgae['raw-instant-tvoc']);
+      record[5] = valueOrInvalid(messgae['raw-instant-resistance']);
     }
     else if(compensated && instantaneous){
-
+      record[3] = valueOrInvalid(messgae['compensated-instant-co2']);
+      record[4] = valueOrInvalid(messgae['compensated-instant-tvoc']);
+      record[5] = valueOrInvalid(messgae['compensated-instant-resistance']);
     }
   }
 };
