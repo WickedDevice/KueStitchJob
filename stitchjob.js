@@ -423,6 +423,15 @@ queue.process('stitch', (job, done) => {
     //    load them into memory one at a time, and process records in each file
     //    generating one csv record at a time and appending to the csv file
     //    progressively as you go
+
+    // for progress indication, first determine how many records we are dealing with
+    let totalMessages = 0;
+    let messagesProcessed = 0;
+    fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
+      let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+      totalMessages += require(fullPathToFile).length;
+    });    
+ 
     let currentRecord = [];
     fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
       let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
@@ -447,6 +456,8 @@ queue.process('stitch', (job, done) => {
           currentRecord[0] = datum.timestamp;
           addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);        
         }
+        messagesProcessed++;
+        job.progress(messagesProcessed, totalMessages);        
       });            
     });    
 
