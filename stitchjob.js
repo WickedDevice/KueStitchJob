@@ -104,24 +104,6 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
       }
     }
   }
-  else if(message.topic.indexOf("/orgs/wd/aqe/co") >= 0){
-      if(!compensated && !instantaneous){
-        record[4] = valueOrInvalid(message['compensated-value']);
-        record[6] = valueOrInvalid(message['raw-value']);
-      }
-      else if(compensated && !instantaneous){
-        record[4] = valueOrInvalid(message['compensated-value']);
-        record[6] = valueOrInvalid(message['raw-value']);
-      }
-      else if(!compensated && instantaneous){
-        record[4] = valueOrInvalid(message['compensated-value']);
-        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
-      }
-      else if(compensated && instantaneous){
-        record[4] = valueOrInvalid(message['compensated-value']);
-        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
-      }
-  }
   else if(message.topic.indexOf("/orgs/wd/aqe/so2") >= 0){
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['compensated-value']);
@@ -209,6 +191,24 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
       record[3] = valueOrInvalid(message['compensated-value']);
     }
   }
+  else if(message.topic.indexOf("/orgs/wd/aqe/co") >= 0){
+      if(!compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+  }  
   else if(message.topic.indexOf("/orgs/wd/aqe/voc") >= 0){
     if(!compensated && !instantaneous){
       record[3] = valueOrInvalid(messgae['converted-co2']);
