@@ -34,6 +34,11 @@ let valueOrInvalid = (value) => {
 }
 
 let addMessageToRecord = (message, model, compensated, instantaneous, record) => {
+  let natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
+  if(known_topic_prefixes.indexOf(natural_topic) < 0){
+    return;
+  }
+
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
     record[0] = message.timestamp; 
     if(!compensated && !instantaneous){
@@ -211,24 +216,24 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   }  
   else if(message.topic.indexOf("/orgs/wd/aqe/voc") >= 0){
     if(!compensated && !instantaneous){
-      record[3] = valueOrInvalid(messgae['converted-co2']);
-      record[4] = valueOrInvalid(messgae['converted-tvoc']);
-      record[5] = valueOrInvalid(messgae['converted-resistance']);
+      record[3] = valueOrInvalid(message['converted-co2']);
+      record[4] = valueOrInvalid(message['converted-tvoc']);
+      record[5] = valueOrInvalid(message['converted-resistance']);
     }
     else if(compensated && !instantaneous){
-      record[3] = valueOrInvalid(messgae['compensated-co2']);
-      record[4] = valueOrInvalid(messgae['compensated-tvoc']);
-      record[5] = valueOrInvalid(messgae['compensated-resistance']);
+      record[3] = valueOrInvalid(message['compensated-co2']);
+      record[4] = valueOrInvalid(message['compensated-tvoc']);
+      record[5] = valueOrInvalid(message['compensated-resistance']);
     }
     else if(!compensated && instantaneous){
-      record[3] = valueOrInvalid(messgae['raw-instant-co2']);
-      record[4] = valueOrInvalid(messgae['raw-instant-tvoc']);
-      record[5] = valueOrInvalid(messgae['raw-instant-resistance']);
+      record[3] = valueOrInvalid(message['raw-instant-co2']);
+      record[4] = valueOrInvalid(message['raw-instant-tvoc']);
+      record[5] = valueOrInvalid(message['raw-instant-resistance']);
     }
     else if(compensated && instantaneous){
-      record[3] = valueOrInvalid(messgae['compensated-instant-co2']);
-      record[4] = valueOrInvalid(messgae['compensated-instant-tvoc']);
-      record[5] = valueOrInvalid(messgae['compensated-instant-resistance']);
+      record[3] = valueOrInvalid(message['compensated-instant-co2']);
+      record[4] = valueOrInvalid(message['compensated-instant-tvoc']);
+      record[5] = valueOrInvalid(message['compensated-instant-resistance']);
     }
   }
 };
@@ -373,12 +378,22 @@ let getTemperatureUnits = (items) => {
 let convertRecordToString = (record, modelType, utcOffset) => {
    let r = record.slice();   
    r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
+   let num_non_trivial_fields = 0;
    for(let i = 0; i < getRecordLengthByModelType(modelType); i++){
      if(r[i] === undefined){
        r[i] = invalid_value_string;
      }
+     else{
+       num_non_trivial_fields++;
+     }
    }
-   return r.join(",") + "\r\n";
+
+   if(num_non_trivial_fields > 1){
+     return r.join(",") + "\r\n";
+   }
+   else{
+     return "";
+   }
 };
 
 queue.process('stitch', (job, done) => {
@@ -438,7 +453,10 @@ queue.process('stitch', (job, done) => {
       require(fullPathToFile).forEach( (datum, index) => {
         if(index == 0){ 
           // special case, use this timestamp
-          currentRecord[0] = datum.timestamp;           
+          let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
+          if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
+            currentRecord[0] = datum.timestamp;           
+          }
         }
 
         let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
@@ -451,6 +469,7 @@ queue.process('stitch', (job, done) => {
         // then reset the current record
         // and add this datum to it, and use it's timestamp
         else {
+          // if the record is non-trivial, add it 
           fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
           currentRecord = [];
           currentRecord[0] = datum.timestamp;
@@ -485,7 +504,7 @@ queue.process('stitch', (job, done) => {
 });
 
 process.once( 'uncaughtException', function(err){
-  console.error( 'Something bad happened: ', err );
+  console.error( 'Something bad happened: ', err.message, err.stack );
   queue.shutdown( 1000, function(err2){
     console.error( 'Kue shutdown result: ', err2 || 'OK' );
     process.exit( 0 );
