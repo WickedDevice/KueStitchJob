@@ -238,7 +238,9 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   }
 };
 
-let getEggModelType = (serialNumber, extantTopics) => {
+let getEggModelType = (dirname, extantTopics) => {
+  let serialNumber = dirname.split("_");
+  serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
   if(extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0){
     if(extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0){
       return "model A";
@@ -290,7 +292,9 @@ let getRecordLengthByModelType = (modelType) => {
   }
 }
 
-let determineTimebase = (serialNumber, items, uniqueTopics) => {
+let determineTimebase = (dirname, items, uniqueTopics) => {
+  let serialNumber = dirname.split("_");
+  serialNumber = serialNumber[serialNumber.length - 1];
   let temperatureTopic = null;
   if(uniqueTopics.indexOf("/orgs/wd/aqe/temperature") >= 0){
     temperatureTopic = "/orgs/wd/aqe/temperature";
