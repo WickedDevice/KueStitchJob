@@ -452,7 +452,12 @@ queue.process('stitch', (job, done) => {
     });    
  
     let currentRecord = [];
-    fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
+    fs.readdirSync(`${job.data.save_path}/${dir}/`)
+    .sort((a,b) => {
+      return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() - 
+        fs.statSync(`${job.data.save_path}/${dir}/${b}`).mtime.getTime();      
+    })
+    .forEach( (filename) => {
       let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
       require(fullPathToFile).forEach( (datum, index) => {
         if(index == 0){ 
