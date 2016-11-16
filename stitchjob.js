@@ -419,7 +419,17 @@ queue.process('stitch', (job, done) => {
   //    analyze the time differences between adjacent messages on the temperature
   //    topic (which all Eggs have)
   getDirectories(job.data.save_path).forEach( (dir) => {
-    let items = require(`${job.data.save_path}/${dir}/1.json`);
+    let items = null;
+    try{
+      items = require(`${job.data.save_path}/${dir}/1.json`);
+    } 
+    catch(error){
+      let serialNumber = dir.split("_");
+      serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+      
+      fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+      return;
+    }
 
     // collect the unique topics in the first batch of messages
     let uniqueTopics = {};
