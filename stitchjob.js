@@ -408,116 +408,132 @@ queue.process('stitch', (job, done) => {
   //    sequence  - the sequence number within this request chain
 
   // 1. for each folder in save_path, create an empty csv file with the same name
-  getDirectories(job.data.save_path).forEach( (dir) => {
-    fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.csv`, 'w'));
-  });
+  let dir = ${job.data.serials[0]};  
+  fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.csv`, 'w'));  
 
   // 2. for each folder in save_path, analyze file "1.json" to infer the type of Egg
   //    model, generate an appropriate header row and append it to the csv file, and 
   //    save the egg model in a variable for later dependencies, and establish the
   //    time base of the data in the file. In order to determine the time base,
   //    analyze the time differences between adjacent messages on the temperature
-  //    topic (which all Eggs have)
-  getDirectories(job.data.save_path).forEach( (dir) => {
-    let items = null;
-    try{
-      items = require(`${job.data.save_path}/${dir}/1.json`);
-    } 
-    catch(error){
-      let serialNumber = dir.split("_");
-      serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-      
-      fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
-      return;
-    }
-
-    // collect the unique topics in the first batch of messages
-    let uniqueTopics = {};
-    items.forEach( (item) => {
-      uniqueTopics[item.topic] = 1;
-    });
-    uniqueTopics = Object.keys(uniqueTopics);
+  //    topic (which all Eggs have)  
+  let items = null;
+  try{
+    items = require(`${job.data.save_path}/${dir}/1.json`);
+  } 
+  catch(error){
+    let serialNumber = dir.split("_");
+    serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
     
-    job.log(uniqueTopics);
-    let modelType = getEggModelType(dir, uniqueTopics);
-    job.log(`Egg Serial Number ${dir} is ${modelType} type`); 
+    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+    done();
+    return;
+  }
 
-    let temperatureUnits = getTemperatureUnits(items);
-    appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
-
-    let timeBase = determineTimebase(dir, items, uniqueTopics);
-    job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
-
-    // 3. for each folder in save_path, list the files in that folder
-    //    load them into memory one at a time, and process records in each file
-    //    generating one csv record at a time and appending to the csv file
-    //    progressively as you go
-
-    // for progress indication, first determine how many records we are dealing with
-    let totalMessages = 0;
-    let messagesProcessed = 0;
-    fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
-      let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-      totalMessages += require(fullPathToFile).length;
-    });    
- 
-    let currentRecord = [];
-    fs.readdirSync(`${job.data.save_path}/${dir}/`)
-    .sort((a,b) => {
-      return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() - 
-        fs.statSync(`${job.data.save_path}/${dir}/${b}`).mtime.getTime();      
-    })
-    .forEach( (filename) => {
-      let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-      require(fullPathToFile).forEach( (datum, index) => {
-        if(index == 0){ 
-          // special case, use this timestamp
-          let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
-          if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
-            currentRecord[0] = datum.timestamp;           
-          }
-        }
-
-        let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
-
-        // if datum falls within current record, then just add it
-        if(timeToPreviousMessage < timeBase / 2){
-          addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-        }
-        // if it doesn't, then append the stringified current record to the csv file
-        // then reset the current record
-        // and add this datum to it, and use it's timestamp
-        else {
-          // if the record is non-trivial, add it 
-          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
-          currentRecord = [];
-          currentRecord[0] = datum.timestamp;
-          addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);        
-        }
-        messagesProcessed++;
-        job.progress(messagesProcessed, totalMessages);        
-      });            
-    });    
-
-    // make sure to commit the last record to file in whatever stat it's in
-    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));    
-
+  // collect the unique topics in the first batch of messages
+  let uniqueTopics = {};
+  items.forEach( (item) => {
+    uniqueTopics[item.topic] = 1;
   });
+  uniqueTopics = Object.keys(uniqueTopics);
+  
+  job.log(uniqueTopics);
+  let modelType = getEggModelType(dir, uniqueTopics);
+  job.log(`Egg Serial Number ${dir} is ${modelType} type`); 
 
-  // before declaring we are done, create a job to zip the results up
-  let job2 = queue.create('zip', {
-        title: 'zipping folder ' + job.data.save_path
-        , serials: job.data.serials.slice()
-        , original_serials: job.data.original_serials.slice()
-        , save_path: job.data.save_path
-        , user_id: job.data.user_id
-        , email: job.data.email
-        , zipfilename: job.data.zipfilename
-      })
-      .priority('high')
-      .attempts(10)
-      .backoff({delay: 60*1000, type:'exponential'})
-      .save();
+  let temperatureUnits = getTemperatureUnits(items);
+  appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
+
+  let timeBase = determineTimebase(dir, items, uniqueTopics);
+  job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
+
+  // 3. for each folder in save_path, list the files in that folder
+  //    load them into memory one at a time, and process records in each file
+  //    generating one csv record at a time and appending to the csv file
+  //    progressively as you go
+
+  // for progress indication, first determine how many records we are dealing with
+  let totalMessages = 0;
+  let messagesProcessed = 0;
+  fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
+    let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+    totalMessages += require(fullPathToFile).length;
+  });    
+
+  let currentRecord = [];
+  fs.readdirSync(`${job.data.save_path}/${dir}/`)
+  .sort((a,b) => {
+    return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() - 
+      fs.statSync(`${job.data.save_path}/${dir}/${b}`).mtime.getTime();      
+  })
+  .forEach( (filename) => {
+    let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+    require(fullPathToFile).forEach( (datum, index) => {
+      if(index == 0){ 
+        // special case, use this timestamp
+        let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
+        if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
+          currentRecord[0] = datum.timestamp;           
+        }
+      }
+
+      let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
+
+      // if datum falls within current record, then just add it
+      if(timeToPreviousMessage < timeBase / 2){
+        addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+      }
+      // if it doesn't, then append the stringified current record to the csv file
+      // then reset the current record
+      // and add this datum to it, and use it's timestamp
+      else {
+        // if the record is non-trivial, add it 
+        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+        currentRecord = [];
+        currentRecord[0] = datum.timestamp;
+        addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);        
+      }
+      messagesProcessed++;
+      job.progress(messagesProcessed, totalMessages);        
+    });            
+  });    
+
+  // make sure to commit the last record to file in whatever state it's in
+  fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));    
+
+  let serials = job.data.serials.slice(1);
+  if(serials.length > 0){      
+    let job2 = queue.create('stitch', {
+        title: 'stitching data for ' + serials[0]) 
+      , save_path: job.data.save_path
+      , original_serials: job.data.original_serials.slice()
+      , serials: serials
+      , user_id: job.data.user_id
+      , email: job.data.email
+      , compensated: job.data.compensated
+      , instantaneous: job.data.instantaneous
+      , utcOffset: job.data.utcOffset
+      , zipfilename: job.data.zipfilename
+    })
+    .priority('high')
+    .attempts(1)
+    .save();  
+  }
+  else{
+    // before declaring we are done, create a job to zip the results up
+    let job2 = queue.create('zip', {
+      title: 'zipping folder ' + job.data.save_path
+      , serials: serials
+      , original_serials: job.data.original_serials.slice()
+      , save_path: job.data.save_path
+      , user_id: job.data.user_id
+      , email: job.data.email
+      , zipfilename: job.data.zipfilename
+    })
+    .priority('high')
+    .attempts(1)    
+    .save();    
+  }
 
   done();
 });
