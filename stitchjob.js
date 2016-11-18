@@ -426,6 +426,8 @@ queue.process('stitch', (job, done) => {
     serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
     
     fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+    
+    generateNextJob(job);
     done();
     return;
   }
@@ -501,7 +503,12 @@ queue.process('stitch', (job, done) => {
   // make sure to commit the last record to file in whatever state it's in
   fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));    
 
-  let serials = job.data.serials.slice(1);
+  generateNextJob(job);
+  done();
+});
+
+let generateNextJob = (job) => {
+let serials = job.data.serials.slice(1);
   if(serials.length > 0){      
     let job2 = queue.create('stitch', {
         title: 'stitching data for ' + serials[0]
@@ -533,10 +540,8 @@ queue.process('stitch', (job, done) => {
     .priority('high')
     .attempts(1)    
     .save();    
-  }
-
-  done();
-});
+  }  
+}
 
 process.once( 'uncaughtException', function(err){
   console.error( 'Something bad happened: ', err.message, err.stack );
