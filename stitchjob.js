@@ -408,7 +408,7 @@ queue.process('stitch', (job, done) => {
   //    sequence  - the sequence number within this request chain
 
   // 1. for each folder in save_path, create an empty csv file with the same name
-  let dir = ${job.data.serials[0]};  
+  let dir = job.data.serials[0];  
   fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.csv`, 'w'));  
 
   // 2. for each folder in save_path, analyze file "1.json" to infer the type of Egg
@@ -504,7 +504,7 @@ queue.process('stitch', (job, done) => {
   let serials = job.data.serials.slice(1);
   if(serials.length > 0){      
     let job2 = queue.create('stitch', {
-        title: 'stitching data for ' + serials[0]) 
+        title: 'stitching data for ' + serials[0]
       , save_path: job.data.save_path
       , original_serials: job.data.original_serials.slice()
       , serials: serials
