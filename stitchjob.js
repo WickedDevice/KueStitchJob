@@ -432,6 +432,18 @@ queue.process('stitch', (job, done) => {
     return;
   }
 
+  // if 1.json has zero records, but it exists, that's also a problem we should not continue within
+  if(!items || (items.length == 0)){
+    let serialNumber = dir.split("_");
+    serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+    
+    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
+
+    generateNextJob(job);
+    done();
+    return;  
+  }
+
   // collect the unique topics in the first batch of messages
   let uniqueTopics = {};
   items.forEach( (item) => {
