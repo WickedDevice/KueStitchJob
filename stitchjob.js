@@ -514,6 +514,7 @@ let serials = job.data.serials.slice(1);
         title: 'stitching data for ' + serials[0]
       , save_path: job.data.save_path
       , original_serials: job.data.original_serials.slice()
+      , original_url: job.data.original_url
       , serials: serials
       , user_id: job.data.user_id
       , email: job.data.email
@@ -532,6 +533,7 @@ let serials = job.data.serials.slice(1);
       title: 'zipping folder ' + job.data.save_path
       , serials: serials
       , original_serials: job.data.original_serials.slice()
+      , original_url: job.data.original_url
       , save_path: job.data.save_path
       , user_id: job.data.user_id
       , email: job.data.email
