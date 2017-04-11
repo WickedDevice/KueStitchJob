@@ -407,7 +407,7 @@ queue.process('stitch', (job, done) => {
   //    email     - the email address that should be notified on zip completed
   //    sequence  - the sequence number within this request chain
 
-  let skipJob = job.data.bypass && (job.data.bypass.indexOf('stitch') >= 0);
+  let skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if(!skipJob){
     // 1. for each folder in save_path, create an empty csv file with the same name
     let dir = job.data.serials[0];
@@ -537,6 +537,7 @@ let serials = job.data.serials.slice(1);
       , instantaneous: job.data.instantaneous
       , utcOffset: job.data.utcOffset
       , zipfilename: job.data.zipfilename
+      , bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
     })
     .priority('high')
     .attempts(1)
@@ -553,6 +554,7 @@ let serials = job.data.serials.slice(1);
       , user_id: job.data.user_id
       , email: job.data.email
       , zipfilename: job.data.zipfilename
+      , bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
     })
     .priority('high')
     .attempts(1)
