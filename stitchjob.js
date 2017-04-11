@@ -523,7 +523,7 @@ queue.process('stitch', (job, done) => {
 });
 
 let generateNextJob = (job) => {
-let serials = job.data.serials.slice(1);
+  let serials = job.data.serials.slice(1);
   if(serials.length > 0){
     let job2 = queue.create('stitch', {
         title: 'stitching data for ' + serials[0]
