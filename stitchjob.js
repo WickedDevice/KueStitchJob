@@ -61,9 +61,9 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   }
 
   // in CSV, GPS are always the last three coordinates, patch them in if we've got them
-  if(altitude !== null) message[getRecordLengthByModelType(model)-1] = altitude;
-  if(longitude !== null) message[getRecordLengthByModelType(model)-2] = longitude;
-  if(latitude !== null) message[getRecordLengthByModelType(model)-3] = latitude;
+  if(altitude !== null) record[getRecordLengthByModelType(model)-1] = altitude;
+  if(longitude !== null) record[getRecordLengthByModelType(model)-2] = longitude;
+  if(latitude !== null) record[getRecordLengthByModelType(model)-3] = latitude;
 
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
     record[0] = message.timestamp;
