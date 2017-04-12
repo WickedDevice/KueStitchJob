@@ -39,6 +39,32 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
     return;
   }
 
+  // does this message contain location data?
+  let latitude = null;
+  let longitude = null;
+  let altitude = null;
+
+  if(message.latitude && message.longitude){ // the old way
+    latitude = +message.latitude;
+    longitude = +message.longitude;
+  }
+  else if(message.__location && message.__location.lat && message.__location.lon){ // the new way
+    latitude = +message.__location.lat;
+    longitude = +message.__location.lon;
+  }
+
+  if(message.altitude){ // the old way
+    altitude = +message.altitude;
+  }
+  else if(message.__location && message.__location.alt){ // the new way
+    altitude = +message.__location.alt;
+  }
+
+  // in CSV, GPS are always the last three coordinates, patch them in if we've got them
+  if(altitude !== null) message[getRecordLengthByModelType(model)-1] = altitude;
+  if(longitude !== null) message[getRecordLengthByModelType(model)-2] = longitude;
+  if(latitude !== null) message[getRecordLengthByModelType(model)-3] = latitude;
+
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
     record[0] = message.timestamp;
     if(!compensated && !instantaneous){
