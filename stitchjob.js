@@ -1,4 +1,5 @@
-require('heapdump');
+// require('heapdump');
+
 var promiseDoWhilst = require('promise-do-whilst');
 var kue = require('kue')
   , queue = kue.createQueue();
@@ -7,6 +8,7 @@ path = require('path');
 var moment = require('moment');
 var jStat = require('jStat').jStat;
 
+/*
 function generateHeapDumpAndStats(){
   console.log("generateHeapDumpAndStats");
   //1. Force garbage collection every time this function is called
@@ -25,7 +27,8 @@ function generateHeapDumpAndStats(){
   process.kill(process.pid, 'SIGUSR2');
 }
 
-// setInterval(generateHeapDumpAndStats, 30000);
+setInterval(generateHeapDumpAndStats, 30000);
+*/
 
 let getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter( (file) => {
