@@ -25,7 +25,7 @@ function generateHeapDumpAndStats(){
   process.kill(process.pid, 'SIGUSR2');
 }
 
-setInterval(generateHeapDumpAndStats, 30000);
+// setInterval(generateHeapDumpAndStats, 30000);
 
 let getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter( (file) => {
