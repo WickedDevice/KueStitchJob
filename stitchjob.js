@@ -549,6 +549,7 @@ queue.process('stitch', (job, done) => {
               setTimeout(() => {
                 try{
                   let datum = data.shift();
+                  console.log(datum, index, currentRecord, modelType);
 
                   if(index == 0){
                     // special case, use this timestamp
