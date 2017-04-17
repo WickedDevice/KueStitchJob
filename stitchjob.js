@@ -7,6 +7,26 @@ path = require('path');
 var moment = require('moment');
 var jStat = require('jStat').jStat;
 
+function generateHeapDumpAndStats(){
+  //1. Force garbage collection every time this function is called
+  try {
+    global.gc();
+  } catch (e) {
+    console.log("You must run program with 'node --expose-gc index.js' or 'npm start'");
+    process.exit();
+  }
+
+  //2. Output Heap stats
+  var heapUsed = process.memoryUsage().heapUsed;
+  console.log("Program is using " + heapUsed + " bytes of Heap.")
+
+  //3. Get Heap dump
+  process.kill(process.pid, 'SIGUSR2');
+}
+
+setInterval(generateHeapDumpAndStats, 2000);
+
+
 let getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter( (file) => {
     return fs.statSync(path.join(srcpath, file)).isDirectory();
@@ -512,13 +532,21 @@ queue.process('stitch', (job, done) => {
     })
 
     if(allFiles.length > 0){
+      console.log("Starting main loop for Job")
       promiseDoWhilst(() => {
         // do this action...
-
         let filename = allFiles.shift();
 
-          let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-          require(fullPathToFile).forEach( (datum, index) => {
+        let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+        let data = require(fullPathToFile);
+        let index = 0;
+
+        if(data.length > 0){
+          return promiseDoWhilst(() => {
+            // do this action...
+
+            let datum = data.shift();
+
             if(index == 0){
               // special case, use this timestamp
               let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
@@ -545,9 +573,19 @@ queue.process('stitch', (job, done) => {
             }
             messagesProcessed++;
             job.progress(messagesProcessed, totalMessages);
+            index++;
+          }, () => {
+            // ... while this condition is true
+
+            return data.length > 0
           });
+        }
+        else{
+          return;
+        }
+
       }, () => {
-        // ... while this condition is timeToPreviousMessage
+        // ... while this condition is true
         return allFiles.length > 0;
       }).then(() => {
         // make sure to commit the last record to file in whatever state it's in
@@ -618,22 +656,3 @@ process.once( 'uncaughtException', function(err){
     process.exit( 0 );
   });
 });
-
-function generateHeapDumpAndStats(){
-  //1. Force garbage collection every time this function is called
-  try {
-    global.gc();
-  } catch (e) {
-    console.log("You must run program with 'node --expose-gc index.js' or 'npm start'");
-    process.exit();
-  }
-
-  //2. Output Heap stats
-  var heapUsed = process.memoryUsage().heapUsed;
-  console.log("Program is using " + heapUsed + " bytes of Heap.")
-
-  //3. Get Heap dump
-  process.kill(process.pid, 'SIGUSR2');
-}
-
-setInterval(generateHeapDumpAndStats, 2000);
