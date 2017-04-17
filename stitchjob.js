@@ -578,6 +578,7 @@ queue.process('stitch', (job, done) => {
                   messagesProcessed++;
                   job.progress(messagesProcessed, totalMessages);
                   index++;
+                  console.log("Resolving promise...");
                   resolve();
                 }
                 catch(err){
@@ -589,6 +590,7 @@ queue.process('stitch', (job, done) => {
             });
           }, () => {
             // ... while this condition is true
+            console.log("data.length === " + data.length);
             return data.length > 0
           });
         }
