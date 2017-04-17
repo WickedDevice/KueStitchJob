@@ -587,11 +587,10 @@ queue.process('stitch', (job, done) => {
                   console.log(err.message, err.stack)
                   rej(err);
                 }
-              }, 1);
+              }, 0);
             });
           }, () => {
             // ... while this condition is true
-            console.log(`data.length === ${data.length} > 0 ? ${data.length > 0}`);
             return data.length > 0
           });
         }
