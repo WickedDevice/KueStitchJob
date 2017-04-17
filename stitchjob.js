@@ -1,4 +1,5 @@
 require('heapdump');
+var promiseDoWhilst = require('promise-do-whilst');
 var kue = require('kue')
   , queue = kue.createQueue();
 var fs = require('fs');
@@ -504,54 +505,70 @@ queue.process('stitch', (job, done) => {
     });
 
     let currentRecord = [];
-    fs.readdirSync(`${job.data.save_path}/${dir}/`)
+    let allFiles = fs.readdirSync(`${job.data.save_path}/${dir}/`)
     .sort((a,b) => {
       return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() -
         fs.statSync(`${job.data.save_path}/${dir}/${b}`).mtime.getTime();
     })
-    .forEach( (filename) => {
-      let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-      require(fullPathToFile).forEach( (datum, index) => {
-        if(index == 0){
-          // special case, use this timestamp
-          let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
-          if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
-            currentRecord[0] = datum.timestamp;
-          }
-        }
 
-        let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
+    if(allFiles.length > 0){
+      promiseDoWhilst(() => {
+        // do this action...
 
-        // if datum falls within current record, then just add it
-        if(timeToPreviousMessage < timeBase / 2){
-          addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-        }
-        // if it doesn't, then append the stringified current record to the csv file
-        // then reset the current record
-        // and add this datum to it, and use it's timestamp
-        else {
-          // if the record is non-trivial, add it
-          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
-          currentRecord = [];
-          currentRecord[0] = datum.timestamp;
-          addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-        }
-        messagesProcessed++;
+        let filename = allFiles.shift();
 
-        if((messagesProcessed % 1000) === 0){
-          generateHeapDumpAndStats();
-        }
+          let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+          require(fullPathToFile).forEach( (datum, index) => {
+            if(index == 0){
+              // special case, use this timestamp
+              let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
+              if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
+                currentRecord[0] = datum.timestamp;
+              }
+            }
 
-        job.progress(messagesProcessed, totalMessages);
+            let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
+
+            // if datum falls within current record, then just add it
+            if(timeToPreviousMessage < timeBase / 2){
+              addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+            }
+            // if it doesn't, then append the stringified current record to the csv file
+            // then reset the current record
+            // and add this datum to it, and use it's timestamp
+            else {
+              // if the record is non-trivial, add it
+              fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+              currentRecord = [];
+              currentRecord[0] = datum.timestamp;
+              addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+            }
+            messagesProcessed++;
+            job.progress(messagesProcessed, totalMessages);
+          });
+      }, () => {
+        // ... while this condition is timeToPreviousMessage
+        return allFiles.length > 0;
+      }).then(() => {
+        // make sure to commit the last record to file in whatever state it's in
+        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+      }).then(() => { // job is complete
+        generateNextJob(job);
+        done();
+      }).catch((err) => { // something went badly wrong
+        console.log(err.message, err.stack);
+        done(err);
       });
-    });
-
-    // make sure to commit the last record to file in whatever state it's in
-    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+    }
+    else{ // no files
+      generateNextJob(job);
+      done();
+    }
   }
-
-  generateNextJob(job);
-  done();
+  else{ // skip job
+    generateNextJob(job);
+    done();
+  }
 });
 
 let generateNextJob = (job) => {
@@ -619,4 +636,4 @@ function generateHeapDumpAndStats(){
   process.kill(process.pid, 'SIGUSR2');
 }
 
-// setInterval(generateHeapDumpAndStats, 2000);
+setInterval(generateHeapDumpAndStats, 2000);
