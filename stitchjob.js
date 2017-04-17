@@ -8,6 +8,7 @@ var moment = require('moment');
 var jStat = require('jStat').jStat;
 
 function generateHeapDumpAndStats(){
+  console.log("generateHeapDumpAndStats");
   //1. Force garbage collection every time this function is called
   try {
     global.gc();
@@ -544,36 +545,46 @@ queue.process('stitch', (job, done) => {
         if(data.length > 0){
           return promiseDoWhilst(() => {
             // do this action...
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                try{
+                  let datum = data.shift();
 
-            let datum = data.shift();
+                  if(index == 0){
+                    // special case, use this timestamp
+                    let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
+                    if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
+                      currentRecord[0] = datum.timestamp;
+                    }
+                  }
 
-            if(index == 0){
-              // special case, use this timestamp
-              let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
-              if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
-                currentRecord[0] = datum.timestamp;
-              }
-            }
+                  let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
 
-            let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
+                  // if datum falls within current record, then just add it
+                  if(timeToPreviousMessage < timeBase / 2){
+                    addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                  }
+                  // if it doesn't, then append the stringified current record to the csv file
+                  // then reset the current record
+                  // and add this datum to it, and use it's timestamp
+                  else {
+                    // if the record is non-trivial, add it
+                    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                    currentRecord = [];
+                    currentRecord[0] = datum.timestamp;
+                    addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                  }
+                  messagesProcessed++;
+                  job.progress(messagesProcessed, totalMessages);
+                  index++;
+                  resolve();
+                }
+                catch(err){
+                  reject(err);
+                }
 
-            // if datum falls within current record, then just add it
-            if(timeToPreviousMessage < timeBase / 2){
-              addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-            }
-            // if it doesn't, then append the stringified current record to the csv file
-            // then reset the current record
-            // and add this datum to it, and use it's timestamp
-            else {
-              // if the record is non-trivial, add it
-              fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
-              currentRecord = [];
-              currentRecord[0] = datum.timestamp;
-              addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-            }
-            messagesProcessed++;
-            job.progress(messagesProcessed, totalMessages);
-            index++;
+              }, 1);
+            });
           }, () => {
             // ... while this condition is true
 
