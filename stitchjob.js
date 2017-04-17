@@ -537,6 +537,11 @@ queue.process('stitch', (job, done) => {
           addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
         }
         messagesProcessed++;
+
+        if((messagesProcessed % 1000) === 0){
+          generateHeapDumpAndStats();
+        }
+
         job.progress(messagesProcessed, totalMessages);
       });
     });
@@ -614,4 +619,4 @@ function generateHeapDumpAndStats(){
   process.kill(process.pid, 'SIGUSR2');
 }
 
-setInterval(generateHeapDumpAndStats, 2000);
+// setInterval(generateHeapDumpAndStats, 2000);
