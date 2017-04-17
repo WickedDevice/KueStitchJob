@@ -546,6 +546,8 @@ queue.process('stitch', (job, done) => {
           return promiseDoWhilst(() => {
             // do this action...
             return new Promise((resolve, reject) => {
+              let res = resolve;
+              let rej = reject;
               setTimeout(() => {
                 try{
                   let datum = data.shift();
@@ -579,11 +581,11 @@ queue.process('stitch', (job, done) => {
                   job.progress(messagesProcessed, totalMessages);
                   index++;
                   console.log("Resolving promise...");
-                  resolve();
+                  res();
                 }
                 catch(err){
                   console.log(err.message, err.stack)
-                  reject(err);
+                  rej(err);
                 }
 
               }, 1);
