@@ -25,8 +25,7 @@ function generateHeapDumpAndStats(){
   process.kill(process.pid, 'SIGUSR2');
 }
 
-//setInterval(generateHeapDumpAndStats, 2000);
-
+setInterval(generateHeapDumpAndStats, 30000);
 
 let getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter( (file) => {
@@ -551,7 +550,7 @@ queue.process('stitch', (job, done) => {
               setTimeout(() => {
                 try{
                   let datum = data.shift();
-                  console.log(datum, index, currentRecord, modelType);
+                  // console.log(datum, index, currentRecord, modelType);
 
                   if(index == 0){
                     // special case, use this timestamp
@@ -580,7 +579,7 @@ queue.process('stitch', (job, done) => {
                   messagesProcessed++;
                   job.progress(messagesProcessed, totalMessages);
                   index++;
-                  console.log("Resolving promise...");
+                  // console.log("Resolving promise...");
                   res();
                 }
                 catch(err){
