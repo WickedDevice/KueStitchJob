@@ -580,6 +580,7 @@ queue.process('stitch', (job, done) => {
                   resolve();
                 }
                 catch(err){
+                  console.log(err.message, err.stack)
                   reject(err);
                 }
 
@@ -587,7 +588,6 @@ queue.process('stitch', (job, done) => {
             });
           }, () => {
             // ... while this condition is true
-
             return data.length > 0
           });
         }
