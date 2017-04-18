@@ -622,6 +622,8 @@ queue.process('stitch', (job, done) => {
         fs.statSync(`${job.data.save_path}/${dir}/${b}`).mtime.getTime();
     })
 
+    let rowsWritten = 0;
+    
     if(allFiles.length > 0){
       console.log("Starting main loop for Job")
       promiseDoWhilst(() => {
@@ -631,7 +633,7 @@ queue.process('stitch', (job, done) => {
         let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
         let data = require(fullPathToFile);
         let index = 0;
-        let rowsWritten = 0;
+
         if(data.length > 0){
           return promiseDoWhilst(() => {
             // do this action...
