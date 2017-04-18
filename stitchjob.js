@@ -430,25 +430,89 @@ let getTemperatureUnits = (items) => {
   };
 };
 
-let convertRecordToString = (record, modelType, utcOffset) => {
+// possible options for format are 'csv' and 'influx'
+// influx makes a record object that looks like
+// {
+//   measurement: "egg_data",
+//   tags: {tag_key: tag_value, ... },
+//   fields: {field_key: field_value, ... },
+//   timestamp: Date
+// }
+let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1) => {
    let r = record.slice();
-   r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
-   let num_non_trivial_fields = 0;
-   for(let i = 0; i < getRecordLengthByModelType(modelType); i++){
-     if(r[i] === undefined){
-       r[i] = invalid_value_string;
+   if(format === 'csv'){
+     r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
+     let num_non_trivial_fields = 0;
+     for(let i = 0; i < getRecordLengthByModelType(modelType); i++){
+       if(r[i] === undefined){
+         r[i] = invalid_value_string;
+       }
+       else{
+         num_non_trivial_fields++;
+       }
+     }
+
+     if(num_non_trivial_fields > 1){
+       return r.join(",") + "\r\n";
      }
      else{
-       num_non_trivial_fields++;
+       return "";
+     }
+   }
+   else if(format === 'influx'){
+     let modelInfluxFieldsMap = {
+       "model A" : ["","temperature","humidity","no2","co","no2_raw","co_raw","latitude","longitude","altitude"],
+       "model B" : ["","temperature","humidity","so2","o3","so2_raw","o3_raw","latitude","longitude","altitude"],
+       "model C" : ["","temperature","humidity","particulate","particulate_raw","latitude","longitude","altitude"],
+       "model D" : ["","temperature","humidity","co2","latitude","longitude","altitude"],
+       "model E" : ["","temperature","humidity","voc","co2","voc_raw","latitude","longitude","altitude"],
+       "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"]
+     };
+
+     let modelInfluxTagsMap = {
+       "model A" : ["","","%","ppb","ppm","V","V","deg","deg","m"],
+       "model B" : ["","","%","ppb","ppb","V","V","deg","deg","m"],
+       "model C" : ["","","%","ug/m^3","V","deg","deg","m"],
+       "model D" : ["","","%","ppm","deg","deg","m"],
+       "model E" : ["","","%","ppb","ppm","ohms","deg","deg","m"],
+       "model J" : ["","","%","ppb","ppb","V","V","V","deg","deg","m"]
+     };
+
+     if(moment(r[0]).isValid()){
+       let influxRecord = {
+         measurement: 'egg_data',
+         tags: {},
+         fields: {},
+         timestamp: moment(r[0]).toDate()
+       };
+
+       let num_non_trivial_fields = 0;
+       for(let i = 1; i < getRecordLengthByModelType(modelType); i++){
+         if(r[i] !== undefined){
+           num_non_trivial_fields++;
+           let field = modelInfluxFieldsMap[modelType][i];
+           let tag = modelInfluxTagsMap[modelType][i];
+           if(field){
+             influxRecord.fields[field] = +r[i];
+             if(tag){
+               influxRecord.fields[field + '_units'] = tag;
+             }
+           }
+         }
+       }
+
+       if(num_non_trivial_fields > 0){
+         if(rowsWritten > 0){
+           return "," + JSON.stringify(influxRecord);
+         }
+         else{
+           return JSON.stringify(influxRecord);
+         }
+       }
      }
    }
 
-   if(num_non_trivial_fields > 1){
-     return r.join(",") + "\r\n";
-   }
-   else{
-     return "";
-   }
+   return ""; // if nothing else, still return a blank string
 };
 
 queue.process('stitch', (job, done) => {
@@ -462,7 +526,16 @@ queue.process('stitch', (job, done) => {
   if(!skipJob){
     // 1. for each folder in save_path, create an empty csv file with the same name
     let dir = job.data.serials[0];
-    fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.csv`, 'w'));
+    let extension = 'csv';
+    if(job.data.stitch_format){
+      switch(job.data.stitch_format){
+        case 'influx':
+          extension = 'json';
+          break;
+      }
+    }
+
+    fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.${extension}`, 'w'));
 
     // 2. for each folder in save_path, analyze file "1.json" to infer the type of Egg
     //    model, generate an appropriate header row and append it to the csv file, and
@@ -478,7 +551,12 @@ queue.process('stitch', (job, done) => {
       let serialNumber = dir.split("_");
       serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
-      fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+      if(extension === 'csv'){
+        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+      }
+      else if(extension === 'json'){
+        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+      }
 
       generateNextJob(job);
       done();
@@ -490,7 +568,12 @@ queue.process('stitch', (job, done) => {
       let serialNumber = dir.split("_");
       serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
-      fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
+      if(extension === 'csv'){
+        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
+      }
+      else if(extension === 'json'){
+        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+      }
 
       generateNextJob(job);
       done();
@@ -509,7 +592,12 @@ queue.process('stitch', (job, done) => {
     job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
     let temperatureUnits = getTemperatureUnits(items);
-    appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
+    if(extension === 'csv'){
+      appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
+    }
+    else if(extension === 'json'){
+      fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
+    }
 
     let timeBase = determineTimebase(dir, items, uniqueTopics);
     job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
@@ -543,7 +631,7 @@ queue.process('stitch', (job, done) => {
         let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
         let data = require(fullPathToFile);
         let index = 0;
-
+        let rowsWritten = 0;
         if(data.length > 0){
           return promiseDoWhilst(() => {
             // do this action...
@@ -574,7 +662,14 @@ queue.process('stitch', (job, done) => {
                   // and add this datum to it, and use it's timestamp
                   else {
                     // if the record is non-trivial, add it
-                    fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                    if(extension === 'csv'){
+                      fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                    }
+                    else if(job.data.stitch_format === 'influx'){
+                      fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten));
+                    }
+                    rowsWritten++;
+
                     currentRecord = [];
                     currentRecord[0] = datum.timestamp;
                     addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
@@ -605,7 +700,13 @@ queue.process('stitch', (job, done) => {
         return allFiles.length > 0;
       }).then(() => {
         // make sure to commit the last record to file in whatever state it's in
-        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+        if(extension === 'csv'){
+          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+        }
+        else if(job.data.stitch_format === 'influx'){
+          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten));
+        }
+        rowsWritten++;
       }).then(() => { // job is complete
         generateNextJob(job);
         done();
