@@ -705,6 +705,7 @@ queue.process('stitch', (job, done) => {
         }
         else if(job.data.stitch_format === 'influx'){
           fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten));
+          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
         }
         rowsWritten++;
       }).then(() => { // job is complete
