@@ -495,7 +495,7 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
            if(field){
              influxRecord.fields[field] = +r[i];
              if(tag){
-               influxRecord.fields[field + '_units'] = tag;
+               influxRecord.tags[field + '_units'] = tag;
              }
            }
          }
@@ -623,7 +623,7 @@ queue.process('stitch', (job, done) => {
     })
 
     let rowsWritten = 0;
-    
+
     if(allFiles.length > 0){
       console.log("Starting main loop for Job")
       promiseDoWhilst(() => {
