@@ -438,7 +438,7 @@ let getTemperatureUnits = (items) => {
 //   fields: {field_key: field_value, ... },
 //   timestamp: Date
 // }
-let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1) => {
+let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
    let r = record.slice();
    if(format === 'csv'){
      r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
@@ -502,7 +502,10 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
        }
 
        if(num_non_trivial_fields > 0){
-         influxRecord.tags['serial_number'] = job.data.serials[0];
+         if(serial){
+           influxRecord.tags['serial_number'] = serial;
+         }
+         
          if(rowsWritten > 0){
            return "," + JSON.stringify(influxRecord);
          }
@@ -669,7 +672,7 @@ queue.process('stitch', (job, done) => {
                       fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                     }
                     else if(job.data.stitch_format === 'influx'){
-                      fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten));
+                      fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
                     }
                     rowsWritten++;
 
@@ -707,7 +710,7 @@ queue.process('stitch', (job, done) => {
           fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
         }
         else if(job.data.stitch_format === 'influx'){
-          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten));
+          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWrittenjob.data.serials[0]));
           fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
         }
         rowsWritten++;
