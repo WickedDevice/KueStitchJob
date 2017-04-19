@@ -470,12 +470,12 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
      };
 
      let modelInfluxTagsMap = {
-       "model A" : ["","","%","ppb","ppm","V","V","deg","deg","m"],
-       "model B" : ["","","%","ppb","ppb","V","V","deg","deg","m"],
-       "model C" : ["","","%","ug/m^3","V","deg","deg","m"],
-       "model D" : ["","","%","ppm","deg","deg","m"],
-       "model E" : ["","","%","ppb","ppm","ohms","deg","deg","m"],
-       "model J" : ["","","%","ppb","ppb","V","V","V","deg","deg","m"]
+       "model A" : ["",tempUnits,"%","ppb","ppm","V","V","deg","deg","m"],
+       "model B" : ["",tempUnits,"%","ppb","ppb","V","V","deg","deg","m"],
+       "model C" : ["",tempUnits,"%","ug/m^3","V","deg","deg","m"],
+       "model D" : ["",tempUnits,"%","ppm","deg","deg","m"],
+       "model E" : ["",tempUnits,"%","ppb","ppm","ohms","deg","deg","m"],
+       "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"]
      };
 
      if(moment(r[0]).isValid()){
