@@ -502,6 +502,7 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
        }
 
        if(num_non_trivial_fields > 0){
+         influxRecord.tags['serial_number'] = job.data.serials[0];
          if(rowsWritten > 0){
            return "," + JSON.stringify(influxRecord);
          }
