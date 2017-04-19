@@ -505,7 +505,7 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
          if(serial){
            influxRecord.tags['serial_number'] = serial;
          }
-         
+
          if(rowsWritten > 0){
            return "," + JSON.stringify(influxRecord);
          }
@@ -710,7 +710,7 @@ queue.process('stitch', (job, done) => {
           fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
         }
         else if(job.data.stitch_format === 'influx'){
-          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWrittenjob.data.serials[0]));
+          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
           fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
         }
         rowsWritten++;
