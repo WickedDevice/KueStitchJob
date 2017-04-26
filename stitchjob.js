@@ -570,7 +570,7 @@ queue.process('stitch', (job, done) => {
     });
     let allFiles = firstPassAllFiles.slice();
 
-    return promseDoWhilst(() => {
+    return promiseDoWhilst(() => {
       // do this
       let currentFile = firstPassAllFiles.shift();
       if(currentFile){
