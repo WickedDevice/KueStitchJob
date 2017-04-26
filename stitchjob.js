@@ -645,10 +645,11 @@ queue.process('stitch', (job, done) => {
       let modelType = getEggModelType(dir, uniqueTopics);
       job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
+ 
       if(extension === 'csv'){
         appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
       }
-      else if(extension === 'json'){
+      else if(extension === 'json' && (totalMessages > 0)){       
         fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
       }
 
@@ -737,8 +738,10 @@ queue.process('stitch', (job, done) => {
             fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
           }
           else if(job.data.stitch_format === 'influx'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
-            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
+            if(totalMessages > 0){
+              fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+              fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
+            }
           }
           rowsWritten++;
         }).then(() => { // job is complete
