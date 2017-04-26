@@ -300,7 +300,7 @@ let getEggModelType = (dirname, extantTopics) => {
       return "model J";
     }
     else {
-      return "uknown no2";
+      return "unknown no2";
     }
   }
   else if(extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0){
@@ -460,13 +460,18 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
      }
    }
    else if(format === 'influx'){
+     if(modelType.indexOf("unknown") >= 0){
+       modelType = "unknown"; //could have no2 or so2 in it otherwise
+     }
+
      let modelInfluxFieldsMap = {
        "model A" : ["","temperature","humidity","no2","co","no2_raw","co_raw","latitude","longitude","altitude"],
        "model B" : ["","temperature","humidity","so2","o3","so2_raw","o3_raw","latitude","longitude","altitude"],
        "model C" : ["","temperature","humidity","particulate","particulate_raw","latitude","longitude","altitude"],
        "model D" : ["","temperature","humidity","co2","latitude","longitude","altitude"],
        "model E" : ["","temperature","humidity","voc","co2","voc_raw","latitude","longitude","altitude"],
-       "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"]
+       "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
+       "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
 
      let modelInfluxTagsMap = {
@@ -475,7 +480,8 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
        "model C" : ["",tempUnits,"%","ug/m^3","V","deg","deg","m"],
        "model D" : ["",tempUnits,"%","ppm","deg","deg","m"],
        "model E" : ["",tempUnits,"%","ppb","ppm","ohms","deg","deg","m"],
-       "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"]
+       "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"],
+       "unknown" : ["",tempUnits,"%","deg","deg","m"]
      };
 
      if(moment(r[0]).isValid()){
@@ -541,191 +547,204 @@ queue.process('stitch', (job, done) => {
 
     fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.${extension}`, 'w'));
 
-    // 2. for each folder in save_path, analyze file "1.json" to infer the type of Egg
+    // 2. for each folder in save_path, analyze file all the "n.json" to infer the type of Egg
     //    model, generate an appropriate header row and append it to the csv file, and
     //    save the egg model in a variable for later dependencies, and establish the
     //    time base of the data in the file. In order to determine the time base,
     //    analyze the time differences between adjacent messages on the temperature
     //    topic (which all Eggs have)
-    let items = null;
-    try{
-      items = require(`${job.data.save_path}/${dir}/1.json`);
-    }
-    catch(error){
-      let serialNumber = dir.split("_");
-      serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
-      if(extension === 'csv'){
-        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
-      }
-      else if(extension === 'json'){
-        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
-      }
-
-      generateNextJob(job);
-      done();
-      return;
-    }
-
-    // if 1.json has zero records, but it exists, that's also a problem we should not continue within
-    if(!items || (items.length == 0)){
-      let serialNumber = dir.split("_");
-      serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-
-      if(extension === 'csv'){
-        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
-      }
-      else if(extension === 'json'){
-        fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
-      }
-
-      generateNextJob(job);
-      done();
-      return;
-    }
-
-    // collect the unique topics in the first batch of messages
+    //// **********
     let uniqueTopics = {};
-    items.forEach( (item) => {
-      uniqueTopics[item.topic] = 1;
-    });
-    uniqueTopics = Object.keys(uniqueTopics);
-
-    job.log(uniqueTopics);
-    let modelType = getEggModelType(dir, uniqueTopics);
-    job.log(`Egg Serial Number ${dir} is ${modelType} type`);
-
-    let temperatureUnits = getTemperatureUnits(items);
-    if(extension === 'csv'){
-      appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
-    }
-    else if(extension === 'json'){
-      fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
-    }
-
-    let timeBase = determineTimebase(dir, items, uniqueTopics);
-    job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
-
-    // 3. for each folder in save_path, list the files in that folder
-    //    load them into memory one at a time, and process records in each file
-    //    generating one csv record at a time and appending to the csv file
-    //    progressively as you go
-
-    // for progress indication, first determine how many records we are dealing with
+    let modelType
+    let temperatureUnits
+    let temperatureItems = [] // for the benefit of determineTimebase
+    let rowsWritten = 0;
     let totalMessages = 0;
     let messagesProcessed = 0;
-    fs.readdirSync(`${job.data.save_path}/${dir}/`).forEach( (filename) => {
-      let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-      totalMessages += require(fullPathToFile).length;
-    });
-
     let currentRecord = [];
-    let allFiles = fs.readdirSync(`${job.data.save_path}/${dir}/`)
+    let firstPassAllFiles = fs.readdirSync(`${job.data.save_path}/${dir}/`)
     .sort((a,b) => {
       return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() -
         fs.statSync(`${job.data.save_path}/${dir}/${b}`).mtime.getTime();
-    })
+    });
+    let allFiles = firstPassAllFiles.slice();
 
-    let rowsWritten = 0;
-
-    if(allFiles.length > 0){
-      console.log("Starting main loop for Job")
-      promiseDoWhilst(() => {
-        // do this action...
-        let filename = allFiles.shift();
-
-        let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-        let data = require(fullPathToFile);
-        let index = 0;
-
-        if(data.length > 0){
-          return promiseDoWhilst(() => {
-            // do this action...
-            return new Promise((resolve, reject) => {
-              let res = resolve;
-              let rej = reject;
-              setTimeout(() => {
-                try{
-                  let datum = data.shift();
-                  // console.log(datum, index, currentRecord, modelType);
-
-                  if(index == 0){
-                    // special case, use this timestamp
-                    let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
-                    if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
-                      currentRecord[0] = datum.timestamp;
-                    }
-                  }
-
-                  let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
-
-                  // if datum falls within current record, then just add it
-                  if(timeToPreviousMessage < timeBase / 2){
-                    addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-                  }
-                  // if it doesn't, then append the stringified current record to the csv file
-                  // then reset the current record
-                  // and add this datum to it, and use it's timestamp
-                  else {
-                    // if the record is non-trivial, add it
-                    if(extension === 'csv'){
-                      fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
-                    }
-                    else if(job.data.stitch_format === 'influx'){
-                      fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
-                    }
-                    rowsWritten++;
-
-                    currentRecord = [];
-                    currentRecord[0] = datum.timestamp;
-                    addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-                  }
-                  messagesProcessed++;
-                  job.progress(messagesProcessed, totalMessages);
-                  index++;
-                  // console.log("Resolving promise...");
-                  res();
-                }
-                catch(err){
-                  console.log(err.message, err.stack)
-                  rej(err);
-                }
-              }, 0);
-            });
-          }, () => {
-            // ... while this condition is true
-            return data.length > 0
-          });
+    return promseDoWhilst(() => {
+      // do this
+      let currentFile = firstPassAllFiles.shift();
+      if(currentFile){
+        // operate on the current file
+        let items = null;
+        try{
+          items = require(`${job.data.save_path}/${dir}/${currentFile}`);
         }
-        else{
+        catch(error){
+          let serialNumber = dir.split("_");
+          serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+
+          if(extension === 'csv'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+          }
+          else if(extension === 'json'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+          }
+
+          generateNextJob(job);
+          done();
+          allFiles = [];
+          firstPassAllFiles = [];
           return;
         }
 
-      }, () => {
-        // ... while this condition is true
-        return allFiles.length > 0;
-      }).then(() => {
-        // make sure to commit the last record to file in whatever state it's in
-        if(extension === 'csv'){
-          fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+        // if 1.json has zero records, but it exists, that's also a problem we should not continue within
+        if(currentFile === '1.json' && (!items || (items.length == 0))){
+          let serialNumber = dir.split("_");
+          serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+
+          if(extension === 'csv'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
+          }
+          else if(extension === 'json'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+          }
+
+          generateNextJob(job);
+          done();
+          allFiles = [];
+          firstPassAllFiles = [];
+          return;
         }
-        else if(job.data.stitch_format === 'influx'){
-          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
-          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
-        }
-        rowsWritten++;
-      }).then(() => { // job is complete
+
+        totalMessages += items.length;
+        items.forEach((item) => {
+          uniqueTopics[item.topic] = 1;
+          if(item.topic.indexOf("temperature") >= 0){
+            temperatureItems.push(item);
+          }
+          uniqueTopics[item.topic] = 1;
+          temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
+        });
+      }
+    }, () => {
+      // repeate as long as this is true
+      return firstPassAllFiles.length > 0;
+    }).then(() => {
+      uniqueTopics = Object.keys(uniqueTopics);
+
+      job.log(uniqueTopics);
+      let modelType = getEggModelType(dir, uniqueTopics);
+      job.log(`Egg Serial Number ${dir} is ${modelType} type`);
+
+      if(extension === 'csv'){
+        appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
+      }
+      else if(extension === 'json'){
+        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
+      }
+
+      let timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
+      job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
+    }).then(() => {
+      if(allFiles.length > 0){
+        console.log("Starting main loop for Job")
+        promiseDoWhilst(() => {
+          // do this action...
+          let filename = allFiles.shift();
+
+          let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+          let data = require(fullPathToFile);
+          let index = 0;
+
+          if(data.length > 0){
+            return promiseDoWhilst(() => {
+              // do this action...
+              return new Promise((resolve, reject) => {
+                let res = resolve;
+                let rej = reject;
+                setTimeout(() => {
+                  try{
+                    let datum = data.shift();
+                    // console.log(datum, index, currentRecord, modelType);
+
+                    if(index == 0){
+                      // special case, use this timestamp
+                      let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
+                      if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
+                        currentRecord[0] = datum.timestamp;
+                      }
+                    }
+
+                    let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
+
+                    // if datum falls within current record, then just add it
+                    if(timeToPreviousMessage < timeBase / 2){
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                    }
+                    // if it doesn't, then append the stringified current record to the csv file
+                    // then reset the current record
+                    // and add this datum to it, and use it's timestamp
+                    else {
+                      // if the record is non-trivial, add it
+                      if(extension === 'csv'){
+                        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                      }
+                      else if(job.data.stitch_format === 'influx'){
+                        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                      }
+                      rowsWritten++;
+
+                      currentRecord = [];
+                      currentRecord[0] = datum.timestamp;
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                    }
+                    messagesProcessed++;
+                    job.progress(messagesProcessed, totalMessages);
+                    index++;
+                    // console.log("Resolving promise...");
+                    res();
+                  }
+                  catch(err){
+                    console.log(err.message, err.stack)
+                    rej(err);
+                  }
+                }, 0);
+              });
+            }, () => {
+              // ... while this condition is true
+              return data.length > 0
+            });
+          }
+          else{
+            return;
+          }
+
+        }, () => {
+          // ... while this condition is true
+          return allFiles.length > 0;
+        }).then(() => {
+          // make sure to commit the last record to file in whatever state it's in
+          if(extension === 'csv'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+          }
+          else if(job.data.stitch_format === 'influx'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
+          }
+          rowsWritten++;
+        }).then(() => { // job is complete
+          generateNextJob(job);
+          done();
+        }).catch((err) => { // something went badly wrong
+          console.log(err.message, err.stack);
+          done(err);
+        });
+      }
+      else{ // no files
         generateNextJob(job);
         done();
-      }).catch((err) => { // something went badly wrong
-        console.log(err.message, err.stack);
-        done(err);
-      });
-    }
-    else{ // no files
-      generateNextJob(job);
-      done();
-    }
+      }
+    })
   }
   else{ // skip job
     generateNextJob(job);
