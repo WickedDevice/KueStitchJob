@@ -632,7 +632,14 @@ queue.process('stitch', (job, done) => {
             temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
           });
         }
-
+        else{
+          if(extension === 'csv'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+          }
+          else if(extension === 'json'){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+          }          
+        }
         resolve();
       });
     }, () => {
