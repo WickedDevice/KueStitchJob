@@ -563,6 +563,7 @@ queue.process('stitch', (job, done) => {
     let totalMessages = 0;
     let messagesProcessed = 0;
     let currentRecord = [];
+    let timeBase = 
     let firstPassAllFiles = fs.readdirSync(`${job.data.save_path}/${dir}/`)
     .sort((a,b) => {
       return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() -
@@ -643,7 +644,7 @@ queue.process('stitch', (job, done) => {
         fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
       }
 
-      let timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
+      timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
       job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
     }).then(() => {
       if(allFiles.length > 0){
