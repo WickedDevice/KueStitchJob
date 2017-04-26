@@ -563,7 +563,7 @@ queue.process('stitch', (job, done) => {
     let totalMessages = 0;
     let messagesProcessed = 0;
     let currentRecord = [];
-    let timeBase = 
+    let timeBase = 0;
     let firstPassAllFiles = fs.readdirSync(`${job.data.save_path}/${dir}/`)
     .sort((a,b) => {
       return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() -
