@@ -571,69 +571,77 @@ queue.process('stitch', (job, done) => {
     });
     let allFiles = firstPassAllFiles.slice();
 
+    console.log(`Listed files`, allFiles);
+
     return promiseDoWhilst(() => {
       // do this
-      let currentFile = firstPassAllFiles.shift();
-      if(currentFile){
-        // operate on the current file
-        let items = null;
-        try{
-          items = require(`${job.data.save_path}/${dir}/${currentFile}`);
+      return new Promise((resolve, reject) => {
+        let currentFile = firstPassAllFiles.shift();
+        if(currentFile){
+          // operate on the current file
+          let items = null;
+          try{
+            items = require(`${job.data.save_path}/${dir}/${currentFile}`);
+          }
+          catch(error){
+            let serialNumber = dir.split("_");
+            serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+
+            if(extension === 'csv'){
+              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+            }
+            else if(extension === 'json'){
+              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+            }
+
+            generateNextJob(job);
+            done();
+            allFiles = [];
+            firstPassAllFiles = [];
+            resolve();
+            return;
+          }
+
+          // if 1.json has zero records, but it exists, that's also a problem we should not continue within
+          if(currentFile === '1.json' && (!items || (items.length == 0))){
+            let serialNumber = dir.split("_");
+            serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+
+            if(extension === 'csv'){
+              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
+            }
+            else if(extension === 'json'){
+              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+            }
+
+            generateNextJob(job);
+            done();
+            resolve();
+            allFiles = [];
+            firstPassAllFiles = [];
+            return;
+          }
+
+          totalMessages += items.length;
+          items.forEach((item) => {
+            uniqueTopics[item.topic] = 1;
+            if(item.topic.indexOf("temperature") >= 0){
+              temperatureItems.push(item);
+            }
+            uniqueTopics[item.topic] = 1;
+            temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
+          });
         }
-        catch(error){
-          let serialNumber = dir.split("_");
-          serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
-          if(extension === 'csv'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
-          }
-          else if(extension === 'json'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
-          }
-
-          generateNextJob(job);
-          done();
-          allFiles = [];
-          firstPassAllFiles = [];
-          return;
-        }
-
-        // if 1.json has zero records, but it exists, that's also a problem we should not continue within
-        if(currentFile === '1.json' && (!items || (items.length == 0))){
-          let serialNumber = dir.split("_");
-          serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-
-          if(extension === 'csv'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
-          }
-          else if(extension === 'json'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
-          }
-
-          generateNextJob(job);
-          done();
-          allFiles = [];
-          firstPassAllFiles = [];
-          return;
-        }
-
-        totalMessages += items.length;
-        items.forEach((item) => {
-          uniqueTopics[item.topic] = 1;
-          if(item.topic.indexOf("temperature") >= 0){
-            temperatureItems.push(item);
-          }
-          uniqueTopics[item.topic] = 1;
-          temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
-        });
-      }
+        resolve();
+      });
     }, () => {
       // repeate as long as this is true
       return firstPassAllFiles.length > 0;
     }).then(() => {
       uniqueTopics = Object.keys(uniqueTopics);
-
-      job.log(uniqueTopics);
+      console.log(`Total messages: ${totalMessages}`);
+      job.log(`uniqueTopics: `, uniqueTopics);
       let modelType = getEggModelType(dir, uniqueTopics);
       job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
@@ -736,6 +744,7 @@ queue.process('stitch', (job, done) => {
         }).then(() => { // job is complete
           generateNextJob(job);
           done();
+          console.log(`Completing main loop.`);
         }).catch((err) => { // something went badly wrong
           console.log(err.message, err.stack);
           done(err);
