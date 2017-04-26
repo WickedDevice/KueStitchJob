@@ -460,7 +460,7 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
      }
    }
    else if(format === 'influx'){
-     if(modelType.indexOf("unknown") >= 0){
+     if(!modelType || modelType.indexOf("unknown") >= 0){
        modelType = "unknown"; //could have no2 or so2 in it otherwise
      }
 
