@@ -61,6 +61,7 @@ let valueOrInvalid = (value) => {
 let addMessageToRecord = (message, model, compensated, instantaneous, record) => {
   let natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if(known_topic_prefixes.indexOf(natural_topic) < 0){
+    console.log("UNKNOWN TOPIC ENCOUNTERED", natural_topic);
     return;
   }
 
@@ -90,6 +91,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   if(longitude !== null) record[getRecordLengthByModelType(model)-2] = longitude;
   if(latitude !== null) record[getRecordLengthByModelType(model)-3] = latitude;
 
+  console.log("Model is: ", model);
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
     record[0] = message.timestamp;
     if(!compensated && !instantaneous){
