@@ -638,7 +638,7 @@ queue.process('stitch', 3, (job, done) => {
           }
           else if(extension === 'json'){
             fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
-          }          
+          }
         }
         resolve();
       });
@@ -646,22 +646,25 @@ queue.process('stitch', 3, (job, done) => {
       // repeate as long as this is true
       return firstPassAllFiles.length > 0;
     }).then(() => {
-      uniqueTopics = Object.keys(uniqueTopics);
-      console.log(`Total messages: ${totalMessages}`);
-      job.log(`uniqueTopics: `, uniqueTopics);
-      let modelType = getEggModelType(dir, uniqueTopics);
-      job.log(`Egg Serial Number ${dir} is ${modelType} type`);
+      return new Promise((resolve, reject) => {
+        uniqueTopics = Object.keys(uniqueTopics);
+        console.log(`Total messages: ${totalMessages}`);
+        job.log(`uniqueTopics: `, uniqueTopics);
+        let modelType = getEggModelType(dir, uniqueTopics);
+        job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
- 
-      if(extension === 'csv'){
-        appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
-      }
-      else if(extension === 'json' && (totalMessages > 0)){       
-        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
-      }
 
-      timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
-      job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
+        if(extension === 'csv'){
+          appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
+        }
+        else if(extension === 'json' && (totalMessages > 0)){
+          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
+        }
+
+        timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
+        job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
+        resolve();
+      });
     }).then(() => {
       if(allFiles.length > 0){
         console.log("Starting main loop for Job")
@@ -697,6 +700,7 @@ queue.process('stitch', 3, (job, done) => {
                     // if datum falls within current record, then just add it
                     if(timeToPreviousMessage < timeBase / 2){
                       addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                      console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
                     // then reset the current record
@@ -705,6 +709,7 @@ queue.process('stitch', 3, (job, done) => {
                       // if the record is non-trivial, add it
                       if(extension === 'csv'){
                         fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                        console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if(job.data.stitch_format === 'influx'){
                         fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
@@ -714,6 +719,7 @@ queue.process('stitch', 3, (job, done) => {
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
                       addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                      console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
                     job.progress(messagesProcessed, totalMessages);
