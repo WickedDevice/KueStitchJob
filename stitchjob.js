@@ -558,8 +558,8 @@ queue.process('stitch', 3, (job, done) => {
 
     //// **********
     let uniqueTopics = {};
-    let modelType
-    let temperatureUnits
+    let modelType = null;
+    let temperatureUnits = null;
     let temperatureItems = [] // for the benefit of determineTimebase
     let rowsWritten = 0;
     let totalMessages = 0;
@@ -652,7 +652,7 @@ queue.process('stitch', 3, (job, done) => {
         uniqueTopics = Object.keys(uniqueTopics);
         console.log(`Total messages: ${totalMessages}`);
         job.log(`uniqueTopics: `, uniqueTopics);
-        let modelType = getEggModelType(dir, uniqueTopics);
+        modelType = getEggModelType(dir, uniqueTopics);
         job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
 
