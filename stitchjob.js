@@ -91,7 +91,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   if(longitude !== null) record[getRecordLengthByModelType(model)-2] = longitude;
   if(latitude !== null) record[getRecordLengthByModelType(model)-3] = latitude;
 
-  console.log("Model is: ", model);
+  // console.log("Model is: ", model);
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
     record[0] = message.timestamp;
     if(!compensated && !instantaneous){
@@ -702,7 +702,7 @@ queue.process('stitch', 3, (job, done) => {
                     // if datum falls within current record, then just add it
                     if(timeToPreviousMessage < timeBase / 2){
                       addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-                      console.log(datum, currentRecord);
+                      // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
                     // then reset the current record
@@ -711,7 +711,7 @@ queue.process('stitch', 3, (job, done) => {
                       // if the record is non-trivial, add it
                       if(extension === 'csv'){
                         fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
-                        console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                        // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if(job.data.stitch_format === 'influx'){
                         fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
@@ -721,7 +721,7 @@ queue.process('stitch', 3, (job, done) => {
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
                       addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
-                      console.log(datum, currentRecord);
+                      // console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
                     job.progress(messagesProcessed, totalMessages);
