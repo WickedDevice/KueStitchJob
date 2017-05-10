@@ -679,6 +679,8 @@ queue.process('stitch', 3, (job, done) => {
           let index = 0;
 
           if(data.length > 0){
+            let currentTemperatureUnits = 'degC';
+
             return promiseDoWhilst(() => {
               // do this action...
               return new Promise((resolve, reject) => {
@@ -701,6 +703,9 @@ queue.process('stitch', 3, (job, done) => {
 
                     // if datum falls within current record, then just add it
                     if(timeToPreviousMessage < timeBase / 2){
+                      if(datum.topic.indexOf("temperature") >= 0){
+                        currentTemperatureUnits = datum["converted-units"];
+                      }
                       addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
                       // console.log(datum, currentRecord);
                     }
@@ -714,7 +719,7 @@ queue.process('stitch', 3, (job, done) => {
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if(job.data.stitch_format === 'influx'){
-                        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
                       }
                       rowsWritten++;
 
