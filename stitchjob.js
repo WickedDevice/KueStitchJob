@@ -61,7 +61,9 @@ let valueOrInvalid = (value) => {
 let addMessageToRecord = (message, model, compensated, instantaneous, record) => {
   let natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if(known_topic_prefixes.indexOf(natural_topic) < 0){
-    console.log("UNKNOWN TOPIC ENCOUNTERED", natural_topic);
+    if(natural_topic.indexOf("heartbeat") < 0){
+      console.log("UNKNOWN TOPIC ENCOUNTERED", natural_topic);
+    }
     return;
   }
 
@@ -777,6 +779,10 @@ queue.process('stitch', 3, (job, done) => {
         done();
       }
     })
+    .catch((err) => {
+      console.log(err.message, err.stack);
+      done(err);
+    });
   }
   else{ // skip job
     generateNextJob(job);
