@@ -566,6 +566,7 @@ queue.process('stitch', 3, (job, done) => {
     let messagesProcessed = 0;
     let currentRecord = [];
     let timeBase = 0;
+    let currentTemperatureUnits = 'degC';
     let firstPassAllFiles = fs.readdirSync(`${job.data.save_path}/${dir}/`)
     .sort((a,b) => {
       return fs.statSync(`${job.data.save_path}/${dir}/${a}`).mtime.getTime() -
@@ -679,8 +680,6 @@ queue.process('stitch', 3, (job, done) => {
           let index = 0;
 
           if(data.length > 0){
-            let currentTemperatureUnits = 'degC';
-
             return promiseDoWhilst(() => {
               // do this action...
               return new Promise((resolve, reject) => {
