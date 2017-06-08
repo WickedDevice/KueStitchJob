@@ -673,7 +673,7 @@ queue.process('stitch', 3, (job, done) => {
     }).then(() => {
       if(allFiles.length > 0){
         console.log("Starting main loop for Job")
-        promiseDoWhilst(() => {
+        return promiseDoWhilst(() => {
           // do this action...
           let filename = allFiles.shift();
 
