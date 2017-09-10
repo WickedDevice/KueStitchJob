@@ -45,7 +45,8 @@ let known_topic_prefixes = [
   "/orgs/wd/aqe/o3",
   "/orgs/wd/aqe/particulate",
   "/orgs/wd/aqe/co2",
-  "/orgs/wd/aqe/voc"
+  "/orgs/wd/aqe/voc",
+  "/orgs/wd/aqe/pressure"
 ];
 
 let invalid_value_string = "---";
@@ -58,7 +59,7 @@ let valueOrInvalid = (value) => {
   return value;
 }
 
-let addMessageToRecord = (message, model, compensated, instantaneous, record) => {
+let addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure) => {
   let natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if(known_topic_prefixes.indexOf(natural_topic) < 0){
     if(natural_topic.indexOf("heartbeat") < 0){
@@ -89,9 +90,9 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
   }
 
   // in CSV, GPS are always the last three coordinates, patch them in if we've got them
-  if(altitude !== null) record[getRecordLengthByModelType(model)-1] = altitude;
-  if(longitude !== null) record[getRecordLengthByModelType(model)-2] = longitude;
-  if(latitude !== null) record[getRecordLengthByModelType(model)-3] = latitude;
+  if(altitude !== null) record[getRecordLengthByModelType(model, hasPressure)-1] = altitude;
+  if(longitude !== null) record[getRecordLengthByModelType(model, hasPressure)-2] = longitude;
+  if(latitude !== null) record[getRecordLengthByModelType(model, hasPressure)-3] = latitude;
 
   // console.log("Model is: ", model);
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
@@ -220,21 +221,34 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record) =>
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0){
-    if(!compensated && !instantaneous){
-      record[3] = valueOrInvalid(message['compensated-value']);
-      record[4] = valueOrInvalid(message['raw-value']);
+    if(model == 'model C'){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
     }
-    else if(compensated && !instantaneous){
-      record[3] = valueOrInvalid(message['compensated-value']);
-      record[4] = valueOrInvalid(message['raw-value']);
+    else if(model == 'model G'){
+      record[4] = valueOrInvalid(message['pm1p0']);
+      record[5] = valueOrInvalid(message['pm2p5']);
+      record[6] = valueOrInvalid(message['pm10p0']);
     }
-    else if(!compensated && instantaneous){
-      record[3] = valueOrInvalid(message['compensated-value']);
-      record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
-    }
-    else if(compensated && instantaneous){
-      record[3] = valueOrInvalid(message['compensated-value']);
-      record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+  }
+  else if(message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0){
+    record[7] = valueOrInvalid(message['pressure']);
+    if((record[10] === undefined) && !!message['altitude']){
+      record[10] = valueOrInvalid(message['altitude']);
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co2") >= 0){
@@ -316,7 +330,12 @@ let getEggModelType = (dirname, extantTopics) => {
     }
   }
   else if(extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0){
-    return "model C";
+    if(extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0){
+      return "model G";
+    }
+    else {
+      return "model C";
+    }
   }
   else if(extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0){
     return "model D";
@@ -328,24 +347,28 @@ let getEggModelType = (dirname, extantTopics) => {
   return "unknown";
 };
 
-let getRecordLengthByModelType = (modelType) => {
+let getRecordLengthByModelType = (modelType, hasPressure) => {
+  let additionalFields = hasPressure ? 1 : 0;
+
   switch(modelType){
   case 'model A':
-    return 10;
+    return 10 + additionalFields;
   case 'model B':
-    return 10;
+    return 10 + additionalFields;
   case 'model C':
-    return 8;
+    return 8 + additionalFields;
   case 'model D':
-    return 7;
+    return 7 + additionalFields;
   case 'model E':
-    return 9;
+    return 9 + additionalFields;
+  case 'model G':
+    return 10 + additionalFields;
   case 'model J':
-    return 11;
+    return 11 + additionalFields;
   default:
-    return 6;
+    return 6 + additionalFields;
   }
-}
+};
 
 let determineTimebase = (dirname, items, uniqueTopics) => {
   let serialNumber = dirname.split("_");
@@ -391,7 +414,7 @@ let determineTimebase = (dirname, items, uniqueTopics) => {
   return jStat.mean(timeDiffs);
 };
 
-let appendHeaderRow = (model, filepath, temperatureUnits) => {
+let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
   if(!temperatureUnits){
     temperatureUnits = "???";
   }
@@ -414,11 +437,18 @@ let appendHeaderRow = (model, filepath, temperatureUnits) => {
   case "model E":
     headerRow += "co2[ppm],tvoc[ppb],resistance[ohm]";
     break;
+  case "model G":
+    headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+    break;
   case "model J":
     headerRow += "no2[ppb],o3[ppb],no2_we[V],no2_aux[V],o3[V]";
     break;
   default:
     break;
+  }
+
+  if(hasPressure){
+    headerRow += ",pressure[Pa]";
   }
 
   headerRow += ",latitude[deg],longitude[deg],altitude[deg]\r\n";
@@ -442,12 +472,12 @@ let getTemperatureUnits = (items) => {
 //   fields: {field_key: field_value, ... },
 //   timestamp: Date
 // }
-let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
+let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
    let r = record.slice();
    if(format === 'csv'){
      r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
      let num_non_trivial_fields = 0;
-     for(let i = 0; i < getRecordLengthByModelType(modelType); i++){
+     for(let i = 0; i < getRecordLengthByModelType(modelType, hasPressure); i++){
        if(r[i] === undefined){
          r[i] = invalid_value_string;
        }
@@ -474,6 +504,7 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
        "model C" : ["","temperature","humidity","particulate","particulate_raw","latitude","longitude","altitude"],
        "model D" : ["","temperature","humidity","co2","latitude","longitude","altitude"],
        "model E" : ["","temperature","humidity","voc","co2","voc_raw","latitude","longitude","altitude"],
+       "model G" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
        "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
@@ -484,9 +515,22 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
        "model C" : ["",tempUnits,"%","ug/m^3","V","deg","deg","m"],
        "model D" : ["",tempUnits,"%","ppm","deg","deg","m"],
        "model E" : ["",tempUnits,"%","ppb","ppm","ohms","deg","deg","m"],
+       "model G" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
        "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"],
        "unknown" : ["",tempUnits,"%","deg","deg","m"]
      };
+
+     if(hasPressure){
+       // pressure is always going to be assumed to come right before the GPS data
+       // if we have pressure, add it in at the expected record offset
+       Object.keys(modelInfluxFieldsMap).forEach((key) => {
+         modelInfluxFieldsMap[key].splice(modelInfluxFieldsMap[key].length - 3, 0, "pressure");
+       });
+
+       Object.keys(modelInfluxTagsMap).forEach((key) => {
+         modelInfluxTagsMap[key].splice(modelInfluxTagsMap[key].length - 3, 0, "Pa");
+       });
+     }
 
      if(moment(r[0]).isValid()){
        let influxRecord = {
@@ -497,7 +541,7 @@ let convertRecordToString = (record, modelType, utcOffset, tempUnits = 'degC', f
        };
 
        let num_non_trivial_fields = 0;
-       for(let i = 1; i < getRecordLengthByModelType(modelType); i++){
+       for(let i = 1; i < getRecordLengthByModelType(modelType, hasPressure); i++){
          if(r[i] !== undefined){
            num_non_trivial_fields++;
            let field = modelInfluxFieldsMap[modelType][i];
@@ -562,6 +606,7 @@ queue.process('stitch', 3, (job, done) => {
     let uniqueTopics = {};
     let modelType = null;
     let temperatureUnits = null;
+    let hasPressure = false;
     let temperatureItems = [] // for the benefit of determineTimebase
     let rowsWritten = 0;
     let totalMessages = 0;
@@ -633,6 +678,9 @@ queue.process('stitch', 3, (job, done) => {
             if(item.topic.indexOf("temperature") >= 0){
               temperatureItems.push(item);
             }
+            if(item.topic.indexOf("pressure") >= 0){
+              hasPressure = true;
+            }
             uniqueTopics[item.topic] = 1;
             temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
           });
@@ -660,7 +708,7 @@ queue.process('stitch', 3, (job, done) => {
 
 
         if(extension === 'csv'){
-          appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits);
+          appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure);
         }
         else if(extension === 'json' && (totalMessages > 0)){
           fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
@@ -707,7 +755,7 @@ queue.process('stitch', 3, (job, done) => {
                       if(datum.topic.indexOf("temperature") >= 0){
                         currentTemperatureUnits = datum["converted-units"];
                       }
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure);
                       // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
@@ -716,17 +764,17 @@ queue.process('stitch', 3, (job, done) => {
                     else {
                       // if the record is non-trivial, add it
                       if(extension === 'csv'){
-                        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+                        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, hasPressure, job.data.utcOffset));
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if(job.data.stitch_format === 'influx'){
-                        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
                       }
                       rowsWritten++;
 
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure);
                       // console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
@@ -756,11 +804,11 @@ queue.process('stitch', 3, (job, done) => {
         }).then(() => {
           // make sure to commit the last record to file in whatever state it's in
           if(extension === 'csv'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
+            fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, hasPressure, job.data.utcOffset));
           }
           else if(job.data.stitch_format === 'influx'){
             if(totalMessages > 0){
-              fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+              fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
               fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
             }
           }
