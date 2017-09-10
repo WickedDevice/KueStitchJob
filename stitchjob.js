@@ -817,6 +817,7 @@ queue.process('stitch', 3, (job, done) => {
         }).then(() => { // job is complete
           job.log(`Generating next job after doing work...`);
           generateNextJob(job);
+          job.log(`About to call done.`);
           done();
           console.log(`Completing main loop.`);
         }).catch((err) => { // something went badly wrong
