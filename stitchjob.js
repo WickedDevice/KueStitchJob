@@ -802,6 +802,7 @@ queue.process('stitch', 3, (job, done) => {
           // ... while this condition is true
           return allFiles.length > 0;
         }).then(() => {
+          job.log(`Finished processing all JSON files, committing last record`);
           // make sure to commit the last record to file in whatever state it's in
           if(extension === 'csv'){
             fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, hasPressure, job.data.utcOffset));
@@ -814,25 +815,30 @@ queue.process('stitch', 3, (job, done) => {
           }
           rowsWritten++;
         }).then(() => { // job is complete
+          job.log(`Generating next job after doing work...`);
           generateNextJob(job);
           done();
           console.log(`Completing main loop.`);
         }).catch((err) => { // something went badly wrong
+          job.log(`Error occured... ${err.message}`);
           console.log(err.message, err.stack);
           done(err);
         });
       }
       else{ // no files
+        job.log(`Generating next job because of no work to do...`);
         generateNextJob(job);
         done();
       }
     })
     .catch((err) => {
+      job.log(`Error occured... ${err.message}`);
       console.log(err.message, err.stack);
       done(err);
     });
   }
   else{ // skip job
+    job.log(`Generating next job because skipped...`);
     generateNextJob(job);
     done();
   }
