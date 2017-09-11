@@ -823,6 +823,7 @@ queue.process('stitch', 3, (job, done) => {
         }).catch((err) => { // something went badly wrong
           job.log(`Error occured... ${err.message}`);
           console.log(err.message, err.stack);
+          generateNextJob(job);
           done(err);
         });
       }
@@ -835,6 +836,7 @@ queue.process('stitch', 3, (job, done) => {
     .catch((err) => {
       job.log(`Error occured... ${err.message}`);
       console.log(err.message, err.stack);
+      generateNextJob(job);
       done(err);
     });
   }
