@@ -656,8 +656,9 @@ queue.process('stitch', 3, (job, done) => {
           }
 
           // if 1.json has zero records, but it exists, that's also a problem we should not continue within
+          let serialNumber = "";
           if(currentFile === '1.json' && (!items || (items.length == 0))){
-            let serialNumber = dir.split("_");
+            serialNumber = dir.split("_");
             serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
             if(extension === 'csv'){
