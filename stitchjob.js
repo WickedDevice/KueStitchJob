@@ -623,6 +623,8 @@ queue.process('stitch', 3, (job, done) => {
 
     console.log(`Listed files`, allFiles);
 
+    let stop_working = false;
+
     return promiseDoWhilst(() => {
       // do this
       return new Promise((resolve, reject) => {
@@ -644,6 +646,7 @@ queue.process('stitch', 3, (job, done) => {
               fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
             }
 
+            stop_working = true;
             generateNextJob(job);
             done();
             allFiles = [];
@@ -664,6 +667,7 @@ queue.process('stitch', 3, (job, done) => {
               fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
             }
 
+            stop_working = true;
             generateNextJob(job);
             done();
             resolve();
@@ -699,6 +703,10 @@ queue.process('stitch', 3, (job, done) => {
       // repeate as long as this is true
       return firstPassAllFiles.length > 0;
     }).then(() => {
+      if(stop_working){
+        return;
+      }
+
       return new Promise((resolve, reject) => {
         uniqueTopics = Object.keys(uniqueTopics);
         console.log(`Total messages: ${totalMessages}`);
@@ -719,6 +727,10 @@ queue.process('stitch', 3, (job, done) => {
         resolve();
       });
     }).then(() => {
+      if(stop_working){
+        return;
+      }
+
       if(allFiles.length > 0){
         console.log("Starting main loop for Job")
         return promiseDoWhilst(() => {
@@ -816,6 +828,7 @@ queue.process('stitch', 3, (job, done) => {
           rowsWritten++;
         }).then(() => { // job is complete
           job.log(`Generating next job after doing work...`);
+          stop_working = true;
           generateNextJob(job);
           job.log(`About to call done.`);
           done();
@@ -823,12 +836,14 @@ queue.process('stitch', 3, (job, done) => {
         }).catch((err) => { // something went badly wrong
           job.log(`Error occured... ${err.message}`);
           console.log(err.message, err.stack);
+          stop_working = true;
           generateNextJob(job);
           done(err);
         });
       }
       else{ // no files
         job.log(`Generating next job because of no work to do...`);
+        stop_working = true;
         generateNextJob(job);
         done();
       }
@@ -836,12 +851,14 @@ queue.process('stitch', 3, (job, done) => {
     .catch((err) => {
       job.log(`Error occured... ${err.message}`);
       console.log(err.message, err.stack);
+      stop_working = true;
       generateNextJob(job);
       done(err);
     });
   }
   else{ // skip job
     job.log(`Generating next job because skipped...`);
+    stop_working = true;
     generateNextJob(job);
     done();
   }
