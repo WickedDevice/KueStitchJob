@@ -633,6 +633,9 @@ queue.process('stitch', 3, (job, done) => {
       // do this
       return new Promise((resolve, reject) => {
         let currentFile = firstPassAllFiles.shift();
+        let serialNumber = dir.split("_");
+        serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+                
         if(currentFile){
           // operate on the current file
           let items = null;
@@ -640,8 +643,6 @@ queue.process('stitch', 3, (job, done) => {
             items = require(`${job.data.save_path}/${dir}/${currentFile}`);
           }
           catch(error){
-            let serialNumber = dir.split("_");
-            serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
             if(extension === 'csv'){
               fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
