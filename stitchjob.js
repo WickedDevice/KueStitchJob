@@ -451,7 +451,7 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     headerRow += ",pressure[Pa]";
   }
 
-  headerRow += ",latitude[deg],longitude[deg],altitude[deg]\r\n";
+  headerRow += ",latitude[deg],longitude[deg],altitude[m]\r\n";
   fs.appendFileSync(filepath, headerRow);
 };
 
