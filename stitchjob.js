@@ -250,9 +250,9 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0){
-    record[7] = valueOrInvalid(message['pressure']);
-    if((record[10] === undefined) && !!message['altitude']){
-      record[10] = valueOrInvalid(message['altitude']);
+    record[getRecordLengthByModelType(model, hasPressure)-4] = valueOrInvalid(message['pressure']);
+    if((record[getRecordLengthByModelType(model, hasPressure)-1] === undefined) && !!message['altitude']){
+      record[getRecordLengthByModelType(model, hasPressure)-1] = valueOrInvalid(message['altitude']);
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co2") >= 0){
