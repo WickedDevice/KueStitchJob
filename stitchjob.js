@@ -635,7 +635,9 @@ queue.process('stitch', 3, (job, done) => {
         let currentFile = firstPassAllFiles.shift();
         let serialNumber = dir.split("_");
         serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-                
+          
+        console.log(`currentFile: ${currentFile}, serialNumber: ${serialNumber}`);
+      
         if(currentFile){
           // operate on the current file
           let items = null;
@@ -718,8 +720,8 @@ queue.process('stitch', 3, (job, done) => {
         console.log(`Total messages: ${totalMessages}`);
         job.log(`uniqueTopics: `, uniqueTopics);
         modelType = getEggModelType(dir, uniqueTopics);
+        console.log(`Egg Serial Number ${dir} is ${modelType} type`);
         job.log(`Egg Serial Number ${dir} is ${modelType} type`);
-
 
         if(extension === 'csv'){
           appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure);
