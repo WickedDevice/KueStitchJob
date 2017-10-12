@@ -90,9 +90,9 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
   }
 
   // in CSV, GPS are always the last three coordinates, patch them in if we've got them
-  if(altitude !== null) record[getRecordLengthByModelType(model, hasPressure)-1] = altitude;
-  if(longitude !== null) record[getRecordLengthByModelType(model, hasPressure)-2] = longitude;
-  if(latitude !== null) record[getRecordLengthByModelType(model, hasPressure)-3] = latitude;
+  record[getRecordLengthByModelType(model, hasPressure)-1] = valueOrInvalid(altitude);
+  record[getRecordLengthByModelType(model, hasPressure)-2] = valueOrInvalid(longitude);
+  record[getRecordLengthByModelType(model, hasPressure)-3] = valueOrInvalid(latitude);
 
   // console.log("Model is: ", model);
   if(message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0){
