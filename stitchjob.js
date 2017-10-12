@@ -51,8 +51,12 @@ let known_topic_prefixes = [
 
 let invalid_value_string = "---";
 
+let isNumeric = (n) => {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+};
+
 let valueOrInvalid = (value) => {
-  if(value === null || value === undefined){
+  if(!isNumeric(value)){
     return invalid_value_string;
   }
 
