@@ -86,12 +86,13 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     longitude = +message.__location.lon;
   }
 
-  if(message.altitude){ // the old way
-    altitude = +message.altitude;
-  }
-  else if(message.__location && message.__location.alt){ // the new way
+  if(message.__location && message.__location.alt){ // the new way
     altitude = +message.__location.alt;
   }
+  else if(message.altitude){ // the old way
+    altitude = +message.altitude;
+  }
+
 
   // in CSV, GPS are always the last three coordinates, patch them in if we've got them
   record[getRecordLengthByModelType(model, hasPressure)-1] = valueOrInvalid(altitude);
