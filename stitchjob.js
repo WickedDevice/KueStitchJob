@@ -167,6 +167,23 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
         record[6] = valueOrInvalid(message['raw-instant-value2'] || message['raw-value2']);
       }
+    } else if(model == 'model K') {
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/so2") >= 0){
@@ -248,6 +265,16 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
       record[5] = valueOrInvalid(message['pm2p5']);
       record[6] = valueOrInvalid(message['pm10p0']);
     }
+    else if(model == 'model K'){
+      record[5] = valueOrInvalid(message['pm1p0']);
+      record[6] = valueOrInvalid(message['pm2p5']);
+      record[7] = valueOrInvalid(message['pm10p0']);
+    }
+    else if(model == 'model L'){
+      record[5] = valueOrInvalid(message['pm1p0']);
+      record[6] = valueOrInvalid(message['pm2p5']);
+      record[7] = valueOrInvalid(message['pm10p0']);
+    }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0){
     record[getRecordLengthByModelType(model, hasPressure)-4] = valueOrInvalid(message['pressure']);
@@ -270,6 +297,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co") >= 0){
+    if(model == 'model A'){
       if(!compensated && !instantaneous){
         record[4] = valueOrInvalid(message['compensated-value']);
         record[6] = valueOrInvalid(message['raw-value']);
@@ -286,6 +314,25 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[4] = valueOrInvalid(message['compensated-value']);
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
+    }
+    else if(model == 'model L'){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/voc") >= 0){
     if(!compensated && !instantaneous){
@@ -321,6 +368,9 @@ let getEggModelType = (dirname, extantTopics) => {
     else if(extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0){
       return "model J";
     }
+    else if(extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0){
+      return "model K";
+    }
     else {
       return "unknown no2";
     }
@@ -336,6 +386,9 @@ let getEggModelType = (dirname, extantTopics) => {
   else if(extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0){
     if(extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0){
       return "model G";
+    }
+    else if(extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0){
+      return "model L";
     }
     else {
       return "model C";
@@ -356,19 +409,25 @@ let getRecordLengthByModelType = (modelType, hasPressure) => {
 
   switch(modelType){
   case 'model A':
-    return 10 + additionalFields;
+    return 10 + additionalFields; // time, temp, hum, no2, no2_raw, co, co_raw, lat, lng, alt + [pressure]
   case 'model B':
-    return 10 + additionalFields;
+    return 10 + additionalFields; // time, temp, hum, so2, so2_raw, o3, o3_raw, lat, lng, alt + [pressure]
   case 'model C':
-    return 8 + additionalFields;
+    return 8 + additionalFields; // time, temp, hum, pm, pm_raw, lat, lng, alt + [pressure]
   case 'model D':
-    return 7 + additionalFields;
+    return 7 + additionalFields; // time, temp, hum, co2, lat, lng, alt + [pressure]
   case 'model E':
-    return 9 + additionalFields;
+    return 9 + additionalFields; // time, temp, hum, co2, voc, resistance, lat, lng, alt + [pressure]
   case 'model G':
-    return 10 + additionalFields;
+    return 10 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
   case 'model J':
-    return 11 + additionalFields;
+    return 11 + additionalFields; // time, temp, hum, no2, no2_raw1, no2_raw2, o3, o3_raw, lat, lng, alt + [pressure]
+  case 'model H': // BASE
+    return 6 + additionalFields; // time, temp, hum, lat, lng, alt + [pressure]
+  case 'model K': // NO2 + PM
+    return 11 + additionalFields; // time, temp, hum, no2, no2_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
+  case 'model L': // CO + PM
+    return 11 + additionalFields; // time, temp, hum, co, co_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
   default:
     return 6 + additionalFields;
   }
@@ -447,7 +506,17 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
   case "model J":
     headerRow += "no2[ppb],o3[ppb],no2_we[V],no2_aux[V],o3[V]";
     break;
+  case "model H":
+    headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
+    break;
+  case "model K":
+    headerRow += "no2[ppb],no2[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+    break;
+  case "model L":
+    headerRow += "co[ppm],co[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+    break;
   default:
+    headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
     break;
   }
 
@@ -510,6 +579,9 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model E" : ["","temperature","humidity","voc","co2","voc_raw","latitude","longitude","altitude"],
        "model G" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
+       "model H" : ["","temperature","humidity","latitude","longitude","altitude"],
+       "model K" : ["","temperature","humidity","no2","no2_raw","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
+       "model L" : ["","temperature","humidity","co","co_raw","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
 
@@ -521,6 +593,9 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model E" : ["",tempUnits,"%","ppb","ppm","ohms","deg","deg","m"],
        "model G" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
        "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"],
+       "model H" : ["",tempUnits,"%","deg","deg","m"],
+       "model K" : ["",tempUnits,"%","ppb","V","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
+       "model L" : ["",tempUnits,"%","ppm","V","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
        "unknown" : ["",tempUnits,"%","deg","deg","m"]
      };
 
@@ -635,7 +710,7 @@ queue.process('stitch', 3, (job, done) => {
         let currentFile = firstPassAllFiles.shift();
         let serialNumber = dir.split("_");
         serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-                
+
         if(currentFile){
           // operate on the current file
           let items = null;
