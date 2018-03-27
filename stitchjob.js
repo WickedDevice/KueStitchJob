@@ -445,7 +445,9 @@ let getEggModelType = (dirname, extantTopics) => {
   case 0b110001: return 'model M'; // co2 + pm + no2
   case 0b1110000: return 'model P'; // co2 + pm + voc
   default: 
-    console.log(`Model Code: ${modelCode}`);
+    if(modelCode !== 0b0){
+      console.log(`Unexpected Model Code: ${modelCode}`);
+    }
     return 'model H'; // base model
   }
 };
