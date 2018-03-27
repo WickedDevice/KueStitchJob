@@ -1,3 +1,4 @@
+//jshint esversion: 6
 // require('heapdump');
 
 var promiseDoWhilst = require('promise-do-whilst');
@@ -359,50 +360,53 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
   }
 };
 
+let refineModelType = (modelType, data) => {
+  switch(modelType){
+  case 'model C': // model C must be disambiguated based on message content
+    let dat = data.find(v => v.topic.indexOf('particulate') >= 0);
+    if(dat){
+      if(dat.pm1p0){
+        return 'model N';
+      }
+    }
+    break;
+  }
+  return modelType;
+};
+
 let getEggModelType = (dirname, extantTopics) => {
   let serialNumber = dirname.split("_");
   serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-  if(extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0){
-    if(extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0){
-      return "model A";
-    }
-    else if(extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0){
-      return "model J";
-    }
-    else if(extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0){
-      return "model K";
-    }
-    else {
-      return "unknown no2";
-    }
-  }
-  else if(extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0){
-    if(extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0){
-      return "model B";
-    }
-    else{
-      return "unknown so2";
-    }
-  }
-  else if(extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0){
-    if(extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0){
-      return "model G";
-    }
-    else if(extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0){
-      return "model L";
-    }
-    else {
-      return "model C";
-    }
-  }
-  else if(extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0){
-    return "model D";
-  }
-  else if(extantTopics.indexOf("/orgs/wd/aqe/voc") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/voc/" + serialNumber) >= 0){
-    return "model E";
-  }
 
-  return "unknown";
+  let hasCO2 = extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0;
+  let hasVOC = extantTopics.indexOf("/orgs/wd/aqe/voc") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/voc/" + serialNumber) >= 0;
+  let hasCO = extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0;
+  let hasNO2 = extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0;
+  let hasSO2 = extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0;
+  let hasO3 = extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0;
+  let hasParticulate = extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0;
+  let has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC].reverse();
+  let modelCode = has.reduce((t,v) => { 
+    return t * 2 + (v ? 1 : 0);
+  }, 0); 
+  // modelCode will be a unique value depending on the combination of bits that are set
+  // the bits are in reverse order of the has array so hasNO2 is bit 0...
+  // the rule is that 'new' sensor presence variables MUST be added to the end of the 'has' array
+      
+  switch(modelCode){
+  case 0b11: return 'model A'; // no2 + co
+  case 0b1100: return 'modelB'; // so2 + o3
+  case 0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
+  case 0b100000: return 'model D'; // co2
+  case 0b1000000: return 'model E'; // voc
+  case 0b110000: return 'model G'; // co2 + particulate
+  case 0b1001: return 'model J'; // Jerry model no2 + o3
+  case 0b10001: return 'model K'; // no2 + particulate
+  case 0b10010: return 'model L'; // co + particulate
+  case 0b110001: return 'model M'; // co2 + pm + no2
+  case 0b1110000: return 'model P'; // co2 + pm + voc
+  default: return 'model H'; // base model
+  }
 };
 
 let getRecordLengthByModelType = (modelType, hasPressure) => {
@@ -429,7 +433,14 @@ let getRecordLengthByModelType = (modelType, hasPressure) => {
     return 11 + additionalFields; // time, temp, hum, no2, no2_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
   case 'model L': // CO + PM
     return 11 + additionalFields; // time, temp, hum, co, co_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
-  default:
+  case 'model M': // co2 + pm + no2  
+    return 12 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, no2, no2_raw, lat, lng, alt + [pressure]
+  case 'model N': // pm2 only
+    return 9 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
+  case 'model P': // co2 + pm + voc
+    return 13 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, eco2, voc, res, lat, lng, alt + [pressure]
+  case 'model H': // base model
+  default: 
     return 6 + additionalFields;
   }
 };
@@ -506,16 +517,23 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     break;
   case "model J":
     headerRow += "no2[ppb],o3[ppb],no2_we[V],no2_aux[V],o3[V]";
-    break;
-  case "model H":
-    headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
-    break;
+    break;  
   case "model K":
     headerRow += "no2[ppb],no2[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
     break;
   case "model L":
     headerRow += "co[ppm],co[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
     break;
+  case "model M":
+    headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],co2[ppm],no2[ppb],no2[V]";
+    break;
+  case "model N":
+    headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";    
+    break;
+  case "model P":
+    headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],co2[ppm],tvoc[ppb],resistance[ohm]";
+    break;
+  case "model H": // base model
   default:
     headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
     break;
@@ -579,10 +597,13 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model D" : ["","temperature","humidity","co2","latitude","longitude","altitude"],
        "model E" : ["","temperature","humidity","eco2","voc","voc_raw","latitude","longitude","altitude"],
        "model G" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
-       "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
        "model H" : ["","temperature","humidity","latitude","longitude","altitude"],
+       "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
        "model K" : ["","temperature","humidity","no2","no2_raw","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model L" : ["","temperature","humidity","co","co_raw","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
+       "model M" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","no2","no2_raw","latitude","longitude","altitude"],
+       "model N" : ["","temperature","humidity","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
+       "model P" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","eco2","voc","voc_raw","latitude","longitude","altitude"],       
        "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
 
@@ -591,12 +612,15 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model B" : ["",tempUnits,"%","ppb","ppb","V","V","deg","deg","m"],
        "model C" : ["",tempUnits,"%","ug/m^3","V","deg","deg","m"],
        "model D" : ["",tempUnits,"%","ppm","deg","deg","m"],
-       "model E" : ["",tempUnits,"%","ppb","ppm","ohms","deg","deg","m"],
+       "model E" : ["",tempUnits,"%","ppm","ppb","ohms","deg","deg","m"],
        "model G" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
-       "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"],
        "model H" : ["",tempUnits,"%","deg","deg","m"],
+       "model J" : ["",tempUnits,"%","ppb","ppb","V","V","V","deg","deg","m"],
        "model K" : ["",tempUnits,"%","ppb","V","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
        "model L" : ["",tempUnits,"%","ppm","V","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
+       "model M" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","ppb","V","deg","deg","m"],
+       "model N" : ["",tempUnits,"%","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
+       "model P" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","ppm","ppb","ohms","deg","deg","m"],
        "unknown" : ["",tempUnits,"%","deg","deg","m"]
      };
 
@@ -824,6 +848,10 @@ queue.process('stitch', 3, (job, done) => {
           let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
           let data = require(fullPathToFile);
           let index = 0;
+
+          modelType = refineModelType(modelType, data);
+          console.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
+          job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
 
           if(data.length > 0){
             return promiseDoWhilst(() => {
