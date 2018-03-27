@@ -510,7 +510,7 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     headerRow += "co2[ppm]";
     break;
   case "model E":
-    headerRow += "co2[ppm],tvoc[ppb],resistance[ohm]";
+    headerRow += "eco2[ppm],tvoc[ppb],resistance[ohm]";
     break;
   case "model G":
     headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
@@ -531,7 +531,7 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";    
     break;
   case "model P":
-    headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],co2[ppm],tvoc[ppb],resistance[ohm]";
+    headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],eco2[ppm],tvoc[ppb],resistance[ohm]";
     break;
   case "model H": // base model
   default:
