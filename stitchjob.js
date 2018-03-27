@@ -433,7 +433,7 @@ let getEggModelType = (dirname, extantTopics) => {
       
   switch(modelCode){
   case 0b11: return 'model A'; // no2 + co
-  case 0b1100: return 'modelB'; // so2 + o3
+  case 0b1100: return 'model B'; // so2 + o3
   case 0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
   case 0b100000: return 'model D'; // co2
   case 0b1000000: return 'model E'; // voc
