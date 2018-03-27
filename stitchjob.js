@@ -577,7 +577,7 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model B" : ["","temperature","humidity","so2","o3","so2_raw","o3_raw","latitude","longitude","altitude"],
        "model C" : ["","temperature","humidity","particulate","particulate_raw","latitude","longitude","altitude"],
        "model D" : ["","temperature","humidity","co2","latitude","longitude","altitude"],
-       "model E" : ["","temperature","humidity","voc","co2","voc_raw","latitude","longitude","altitude"],
+       "model E" : ["","temperature","humidity","eco2","voc","voc_raw","latitude","longitude","altitude"],
        "model G" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
        "model H" : ["","temperature","humidity","latitude","longitude","altitude"],
