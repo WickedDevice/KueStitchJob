@@ -284,6 +284,11 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
       record[4] = valueOrInvalid(message['pm2p5']);
       record[5] = valueOrInvalid(message['pm10p0']);
     }
+    else if(model === 'model P'){
+      record[4] = valueOrInvalid(message['pm1p0']);
+      record[5] = valueOrInvalid(message['pm2p5']);
+      record[6] = valueOrInvalid(message['pm10p0']);      
+    }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0){
     record[getRecordLengthByModelType(model, hasPressure)-4] = valueOrInvalid(message['pressure']);
