@@ -869,13 +869,6 @@ queue.process('stitch', 3, (job, done) => {
         console.log(`Egg Serial Number ${dir} is ${modelType} type`);
         job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
-        if(extension === 'csv'){
-          appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure);
-        }
-        else if(extension === 'json' && (totalMessages > 0)){
-          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
-        }
-
         timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
         job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
         resolve();
@@ -898,6 +891,13 @@ queue.process('stitch', 3, (job, done) => {
           modelType = refineModelType(modelType, data);
           console.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
+
+          if(extension === 'csv'){
+            appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure);
+          }
+          else if(extension === 'json' && (totalMessages > 0)){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
+          }
 
           if(data.length > 0){
             return promiseDoWhilst(() => {
