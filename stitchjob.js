@@ -131,7 +131,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/no2") >= 0){
-    if(model == 'model A'){
+    if(model === 'model A'){
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['compensated-value']);
         record[5] = valueOrInvalid(message['raw-value']);
@@ -148,7 +148,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[3] = valueOrInvalid(message['compensated-value']);
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
-    } else if(model == 'model J'){
+    } else if(model === 'model J'){
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['converted-value']);
         record[5] = valueOrInvalid(message['raw-value']);
@@ -169,7 +169,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
         record[6] = valueOrInvalid(message['raw-instant-value2'] || message['raw-value2']);
       }
-    } else if(model == 'model K') {
+    } else if(model === 'model K') {
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['compensated-value']);
         record[4] = valueOrInvalid(message['raw-value']);
@@ -189,6 +189,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/so2") >= 0){
+    if(model === 'model B'){
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['compensated-value']);
         record[5] = valueOrInvalid(message['raw-value']);
@@ -205,9 +206,10 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[3] = valueOrInvalid(message['compensated-value']);
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
+    }    
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/o3") >= 0){
-    if(model == 'model B'){
+    if(model === 'model B'){
       if(!compensated && !instantaneous){
         record[4] = valueOrInvalid(message['compensated-value']);
         record[6] = valueOrInvalid(message['raw-value']);
@@ -224,7 +226,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[4] = valueOrInvalid(message['compensated-value']);
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
-    } else if(model == 'model J'){
+    } else if(model === 'model J'){
       if(!compensated && !instantaneous){
         record[4] = valueOrInvalid(message['converted-value']);
         record[7] = valueOrInvalid(message['raw-value']);
@@ -244,7 +246,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0){
-    if(model == 'model C'){
+    if(model === 'model C'){
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['compensated-value']);
         record[4] = valueOrInvalid(message['raw-value']);
@@ -262,20 +264,25 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-    else if(model == 'model G'){
+    else if(model === 'model G'){
       record[4] = valueOrInvalid(message['pm1p0']);
       record[5] = valueOrInvalid(message['pm2p5']);
       record[6] = valueOrInvalid(message['pm10p0']);
     }
-    else if(model == 'model K'){
+    else if(model === 'model K'){
       record[5] = valueOrInvalid(message['pm1p0']);
       record[6] = valueOrInvalid(message['pm2p5']);
       record[7] = valueOrInvalid(message['pm10p0']);
     }
-    else if(model == 'model L'){
+    else if(model === 'model L'){
       record[5] = valueOrInvalid(message['pm1p0']);
       record[6] = valueOrInvalid(message['pm2p5']);
       record[7] = valueOrInvalid(message['pm10p0']);
+    }
+    else if(model ==='model N'){
+      record[3] = valueOrInvalid(message['pm1p0']);
+      record[4] = valueOrInvalid(message['pm2p5']);
+      record[5] = valueOrInvalid(message['pm10p0']);
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0){
@@ -285,21 +292,23 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co2") >= 0){
-    if(!compensated && !instantaneous){
-      record[3] = valueOrInvalid(message['raw-instant-value']);
-    }
-    else if(compensated && !instantaneous){
-      record[3] = valueOrInvalid(message['compensated-value']);
-    }
-    else if(!compensated && instantaneous){
-      record[3] = valueOrInvalid(message['raw-instant-value']);
-    }
-    else if(compensated && instantaneous){
-      record[3] = valueOrInvalid(message['compensated-value']);
+    if(['model D','model G','model M','model P'].indexOf(model) >= 0){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['raw-instant-value']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['raw-instant-value']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-value']);
+      }
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co") >= 0){
-    if(model == 'model A'){
+    if(model === 'model A'){
       if(!compensated && !instantaneous){
         record[4] = valueOrInvalid(message['compensated-value']);
         record[6] = valueOrInvalid(message['raw-value']);
@@ -317,7 +326,7 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-    else if(model == 'model L'){
+    else if(model === 'model L'){
       if(!compensated && !instantaneous){
         record[3] = valueOrInvalid(message['compensated-value']);
         record[4] = valueOrInvalid(message['raw-value']);
@@ -337,25 +346,49 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/voc") >= 0){
-    if(!compensated && !instantaneous){
-      record[3] = valueOrInvalid(message['converted-co2']);
-      record[4] = valueOrInvalid(message['converted-tvoc']);
-      record[5] = valueOrInvalid(message['converted-resistance']);
+    if(model === 'model E'){
+      if(!compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['converted-co2']);
+        record[4] = valueOrInvalid(message['converted-tvoc']);
+        record[5] = valueOrInvalid(message['converted-resistance']);
+      }
+      else if(compensated && !instantaneous){
+        record[3] = valueOrInvalid(message['compensated-co2']);
+        record[4] = valueOrInvalid(message['compensated-tvoc']);
+        record[5] = valueOrInvalid(message['compensated-resistance']);
+      }
+      else if(!compensated && instantaneous){
+        record[3] = valueOrInvalid(message['raw-instant-co2']);
+        record[4] = valueOrInvalid(message['raw-instant-tvoc']);
+        record[5] = valueOrInvalid(message['raw-instant-resistance']);
+      }
+      else if(compensated && instantaneous){
+        record[3] = valueOrInvalid(message['compensated-instant-co2']);
+        record[4] = valueOrInvalid(message['compensated-instant-tvoc']);
+        record[5] = valueOrInvalid(message['compensated-instant-resistance']);
+      }      
     }
-    else if(compensated && !instantaneous){
-      record[3] = valueOrInvalid(message['compensated-co2']);
-      record[4] = valueOrInvalid(message['compensated-tvoc']);
-      record[5] = valueOrInvalid(message['compensated-resistance']);
-    }
-    else if(!compensated && instantaneous){
-      record[3] = valueOrInvalid(message['raw-instant-co2']);
-      record[4] = valueOrInvalid(message['raw-instant-tvoc']);
-      record[5] = valueOrInvalid(message['raw-instant-resistance']);
-    }
-    else if(compensated && instantaneous){
-      record[3] = valueOrInvalid(message['compensated-instant-co2']);
-      record[4] = valueOrInvalid(message['compensated-instant-tvoc']);
-      record[5] = valueOrInvalid(message['compensated-instant-resistance']);
+    else if(model === 'model P'){
+      if(!compensated && !instantaneous){
+        record[7] = valueOrInvalid(message['converted-co2']);
+        record[8] = valueOrInvalid(message['converted-tvoc']);
+        record[9] = valueOrInvalid(message['converted-resistance']);
+      }
+      else if(compensated && !instantaneous){
+        record[7] = valueOrInvalid(message['compensated-co2']);
+        record[8] = valueOrInvalid(message['compensated-tvoc']);
+        record[9] = valueOrInvalid(message['compensated-resistance']);
+      }
+      else if(!compensated && instantaneous){
+        record[7] = valueOrInvalid(message['raw-instant-co2']);
+        record[8] = valueOrInvalid(message['raw-instant-tvoc']);
+        record[9] = valueOrInvalid(message['raw-instant-resistance']);
+      }
+      else if(compensated && instantaneous){
+        record[7] = valueOrInvalid(message['compensated-instant-co2']);
+        record[8] = valueOrInvalid(message['compensated-instant-tvoc']);
+        record[9] = valueOrInvalid(message['compensated-instant-resistance']);
+      }      
     }
   }
 };
@@ -464,7 +497,7 @@ let determineTimebase = (dirname, items, uniqueTopics) => {
   let lastTime = null;
 
   items.filter( (item) => {
-    return item.topic == temperatureTopic;
+    return item.topic === temperatureTopic;
   }).forEach( (item) => {
     if(!lastTime){
       lastTime = moment(item.timestamp);
@@ -767,7 +800,7 @@ queue.process('stitch', 3, (job, done) => {
 
           // if 1.json has zero records, but it exists, that's also a problem we should not continue within
           let serialNumber = "";
-          if(currentFile === '1.json' && (!items || (items.length == 0))){
+          if(currentFile === '1.json' && (!items || (items.length === 0))){
             serialNumber = dir.split("_");
             serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
@@ -867,7 +900,7 @@ queue.process('stitch', 3, (job, done) => {
                     let datum = data.shift();
                     // console.log(datum, index, currentRecord, modelType);
 
-                    if(index == 0){
+                    if(index === 0){
                       // special case, use this timestamp
                       let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
                       if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
