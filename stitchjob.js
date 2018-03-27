@@ -436,6 +436,7 @@ let getEggModelType = (dirname, extantTopics) => {
   case 0b1100: return 'model B'; // so2 + o3
   case 0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
   case 0b100000: return 'model D'; // co2
+  case 0b1100000: // NOTE: this is just for data recorded before 3/27/2018
   case 0b1000000: return 'model E'; // voc
   case 0b110000: return 'model G'; // co2 + particulate
   case 0b1001: return 'model J'; // Jerry model no2 + o3
@@ -443,7 +444,9 @@ let getEggModelType = (dirname, extantTopics) => {
   case 0b10010: return 'model L'; // co + particulate
   case 0b110001: return 'model M'; // co2 + pm + no2
   case 0b1110000: return 'model P'; // co2 + pm + voc
-  default: return 'model H'; // base model
+  default: 
+    console.log(`Model Code: ${modelCode}`);
+    return 'model H'; // base model
   }
 };
 
