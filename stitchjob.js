@@ -595,7 +595,7 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model B" : ["","temperature","humidity","so2","o3","so2_raw","o3_raw","latitude","longitude","altitude"],
        "model C" : ["","temperature","humidity","particulate","particulate_raw","latitude","longitude","altitude"],
        "model D" : ["","temperature","humidity","co2","latitude","longitude","altitude"],
-       "model E" : ["","temperature","humidity","eco2","voc","voc_raw","latitude","longitude","altitude"],
+       "model E" : ["","temperature","humidity","eco2|co2","voc","voc_raw","latitude","longitude","altitude"],
        "model G" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model H" : ["","temperature","humidity","latitude","longitude","altitude"],
        "model J" : ["","temperature","humidity","no2","o3","no2_raw1","no2_raw2","o3_raw","latitude","longitude","altitude"],
@@ -603,7 +603,7 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model L" : ["","temperature","humidity","co","co_raw","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model M" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","no2","no2_raw","latitude","longitude","altitude"],
        "model N" : ["","temperature","humidity","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
-       "model P" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","eco2","voc","voc_raw","latitude","longitude","altitude"],       
+       "model P" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","eco2|co2","voc","voc_raw","latitude","longitude","altitude"],       
        "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
 
@@ -648,13 +648,16 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        for(let i = 1; i < getRecordLengthByModelType(modelType, hasPressure); i++){
          if(r[i] !== undefined){
            num_non_trivial_fields++;
-           let field = modelInfluxFieldsMap[modelType][i];
+           let fields = modelInfluxFieldsMap[modelType][i];
+           fields = fields ? fields.split('|') : [] // field becomes an array no matter what
            let tag = modelInfluxTagsMap[modelType][i];
-           if(field){
-             influxRecord.fields[field] = +r[i];
-             if(tag){
-               influxRecord.tags[field + '_units'] = tag;
-             }
+           if(fields.length){
+             fields.forEach((field) => {
+              influxRecord.fields[field] = influxRecord.fields[field] || +r[i];
+              if(tag){
+                influxRecord.tags[field + '_units'] = tag;
+              }
+             });
            }
          }
        }
