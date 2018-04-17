@@ -433,9 +433,10 @@ let getEggModelType = (dirname, extantTopics) => {
       
   switch(modelCode){
   case      0b11: return 'model A'; // no2 + co
-  case    0b1100: return 'modelB'; // so2 + o3
+  case    0b1100: return 'model B'; // so2 + o3
   case   0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
   case  0b100000: return 'model D'; // co2
+  case 0b1100000: // NOTE: this is just for data recorded before 3/27/2018
   case 0b1000000: return 'model E'; // voc
   case  0b110000: return 'model G'; // co2 + particulate
   case    0b1001: return 'model J'; // Jerry model no2 + o3
@@ -445,7 +446,11 @@ let getEggModelType = (dirname, extantTopics) => {
   case 0b1110000: return 'model P'; // co2 + pm + voc
   case   0b11100: return 'model Q'; // pm + co + no2
   case   0b10011: return 'model R'; // pm + o3 + no2 
-  default: return 'model H'; // base model
+  default: 
+    if(modelCode !== 0b0){
+      console.log(`Unexpected Model Code: ${modelCode}`);
+    }
+    return 'model H'; // base model
   }
 };
 
@@ -880,13 +885,6 @@ queue.process('stitch', 3, (job, done) => {
         console.log(`Egg Serial Number ${dir} is ${modelType} type`);
         job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
-        if(extension === 'csv'){
-          appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure);
-        }
-        else if(extension === 'json' && (totalMessages > 0)){
-          fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
-        }
-
         timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
         job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
         resolve();
@@ -909,6 +907,13 @@ queue.process('stitch', 3, (job, done) => {
           modelType = refineModelType(modelType, data);
           console.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
+
+          if(extension === 'csv'){
+            appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure);
+          }
+          else if(extension === 'json' && (totalMessages > 0)){
+            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
+          }
 
           if(data.length > 0){
             return promiseDoWhilst(() => {
