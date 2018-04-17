@@ -432,17 +432,19 @@ let getEggModelType = (dirname, extantTopics) => {
   // the rule is that 'new' sensor presence variables MUST be added to the end of the 'has' array
       
   switch(modelCode){
-  case 0b11: return 'model A'; // no2 + co
-  case 0b1100: return 'modelB'; // so2 + o3
-  case 0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
-  case 0b100000: return 'model D'; // co2
+  case      0b11: return 'model A'; // no2 + co
+  case    0b1100: return 'modelB'; // so2 + o3
+  case   0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
+  case  0b100000: return 'model D'; // co2
   case 0b1000000: return 'model E'; // voc
-  case 0b110000: return 'model G'; // co2 + particulate
-  case 0b1001: return 'model J'; // Jerry model no2 + o3
-  case 0b10001: return 'model K'; // no2 + particulate
-  case 0b10010: return 'model L'; // co + particulate
-  case 0b110001: return 'model M'; // co2 + pm + no2
+  case  0b110000: return 'model G'; // co2 + particulate
+  case    0b1001: return 'model J'; // Jerry model no2 + o3
+  case   0b10001: return 'model K'; // no2 + particulate
+  case   0b10010: return 'model L'; // co + particulate
+  case  0b110001: return 'model M'; // co2 + pm + no2
   case 0b1110000: return 'model P'; // co2 + pm + voc
+  case   0b11100: return 'model Q'; // pm + co + no2
+  case   0b10011: return 'model R'; // pm + o3 + no2 
   default: return 'model H'; // base model
   }
 };
@@ -477,6 +479,10 @@ let getRecordLengthByModelType = (modelType, hasPressure) => {
     return 9 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
   case 'model P': // co2 + pm + voc
     return 13 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, eco2, voc, res, lat, lng, alt + [pressure]
+  case 'model Q':
+    return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, co_raw, co, no2, no2_raw, lat, lng, alt + [pressure]
+  case 'model R':
+    return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, no2, no2_raw, lat, lng, alt + [pressure]
   case 'model H': // base model
   default: 
     return 6 + additionalFields;
@@ -571,6 +577,12 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
   case "model P":
     headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],eco2[ppm],tvoc[ppb],resistance[ohm]";
     break;
+  case "model Q":
+    headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V],no2[ppb],no2[V]";
+    break;  
+  case "model R":
+    headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],co[ppb],co[V],no2[ppb],no2[V]";
+    break;    
   case "model H": // base model
   default:
     headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
@@ -642,6 +654,8 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model M" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","no2","no2_raw","latitude","longitude","altitude"],
        "model N" : ["","temperature","humidity","pm1p0","pm2p5","pm10p0","latitude","longitude","altitude"],
        "model P" : ["","temperature","humidity","co2","pm1p0","pm2p5","pm10p0","eco2|co2","voc","voc_raw","latitude","longitude","altitude"],       
+       "model Q" : ["","temperature","humidity","pm1p0","pm2p5","pm10p0","o3","o3_raw","no2","no2_raw","latitude","longitude","altitude"],
+       "model R" : ["","temperature","humidity","pm1p0","pm2p5","pm10p0","co","co_raw","no2","no2_raw","latitude","longitude","altitude"],
        "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
 
@@ -659,6 +673,8 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "model M" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","ppb","V","deg","deg","m"],
        "model N" : ["",tempUnits,"%","ug/m^3","ug/m^3","ug/m^3","deg","deg","m"],
        "model P" : ["",tempUnits,"%","ppm","ug/m^3","ug/m^3","ug/m^3","ppm","ppb","ohms","deg","deg","m"],
+       "model Q" : ["",tempUnits,"%","ug/m^3","ug/m^3","ug/m^3","ppb","V","ppb","V","deg","deg","m"],
+       "model R" : ["",tempUnits,"%","ug/m^3","ug/m^3","ug/m^3","ppm","V","ppb","V","deg","deg","m"],
        "unknown" : ["",tempUnits,"%","deg","deg","m"]
      };
 
@@ -804,13 +820,13 @@ queue.process('stitch', 3, (job, done) => {
           }
 
           // if 1.json has zero records, but it exists, that's also a problem we should not continue within
-          let serialNumber = "";
+          let sn = "";
           if(currentFile === '1.json' && (!items || (items.length === 0))){
-            serialNumber = dir.split("_");
-            serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+            sn = dir.split("_");
+            sn = sn[sn.length - 1]; // the last part of the dirname
 
             if(extension === 'csv'){
-              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check the time period you requested is accurate`);
+              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${sn}. Please check the time period you requested is accurate`);
             }
             else if(extension === 'json'){
               fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
@@ -840,7 +856,7 @@ queue.process('stitch', 3, (job, done) => {
         }
         else{
           if(extension === 'csv'){
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${sn}. Please check that the Serial Number is accurate`);
           }
           else if(extension === 'json'){
             fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
