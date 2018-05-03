@@ -1,13 +1,12 @@
 //jshint esversion: 6
 // require('heapdump');
 
-var promiseDoWhilst = require('promise-do-whilst');
-var kue = require('kue')
-  , queue = kue.createQueue();
-var fs = require('fs');
-path = require('path');
-var moment = require('moment');
-var jStat = require('jStat').jStat;
+const promiseDoWhilst = require('promise-do-whilst');
+const kue = require('kue'), queue = kue.createQueue();
+const fs = require('fs');
+const path = require('path');
+const moment = require('moment');
+const jStat = require('jStat').jStat;
 
 /*
 function generateHeapDumpAndStats(){
@@ -31,13 +30,13 @@ function generateHeapDumpAndStats(){
 setInterval(generateHeapDumpAndStats, 30000);
 */
 
-let getDirectories = (srcpath) => {
+const getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter( (file) => {
     return fs.statSync(path.join(srcpath, file)).isDirectory();
   });
-}
+};
 
-let known_topic_prefixes = [
+const known_topic_prefixes = [
   "/orgs/wd/aqe/temperature",
   "/orgs/wd/aqe/humidity",
   "/orgs/wd/aqe/no2",
@@ -50,22 +49,22 @@ let known_topic_prefixes = [
   "/orgs/wd/aqe/pressure"
 ];
 
-let invalid_value_string = "---";
+const invalid_value_string = "---";
 
-let isNumeric = (n) => {
+const isNumeric = (n) => {
   return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
-let valueOrInvalid = (value) => {
+const valueOrInvalid = (value) => {
   if(!isNumeric(value)){
     return invalid_value_string;
   }
 
   return value;
-}
+};
 
-let addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure) => {
-  let natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
+const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure) => {
+  const natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if(known_topic_prefixes.indexOf(natural_topic) < 0){
     if(natural_topic.indexOf("heartbeat") < 0){
       console.log("UNKNOWN TOPIC ENCOUNTERED", natural_topic);
@@ -319,45 +318,45 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
       }
     }
     else if(model === 'model G'){
-      record[4] = valueOrInvalid(message['pm1p0']);
-      record[5] = valueOrInvalid(message['pm2p5']);
-      record[6] = valueOrInvalid(message['pm10p0']);
+      record[4] = valueOrInvalid(message.pm1p0);
+      record[5] = valueOrInvalid(message.pm2p5);
+      record[6] = valueOrInvalid(message.pm10p0);
     }
     else if(model === 'model K'){
-      record[5] = valueOrInvalid(message['pm1p0']);
-      record[6] = valueOrInvalid(message['pm2p5']);
-      record[7] = valueOrInvalid(message['pm10p0']);
+      record[5] = valueOrInvalid(message.pm1p0);
+      record[6] = valueOrInvalid(message.pm2p5);
+      record[7] = valueOrInvalid(message.pm10p0);
     }
     else if(model === 'model L'){
-      record[5] = valueOrInvalid(message['pm1p0']);
-      record[6] = valueOrInvalid(message['pm2p5']);
-      record[7] = valueOrInvalid(message['pm10p0']);
+      record[5] = valueOrInvalid(message.pm1p0);
+      record[6] = valueOrInvalid(message.pm2p5);
+      record[7] = valueOrInvalid(message.pm10p0);
     }
     else if(model ==='model N'){
-      record[3] = valueOrInvalid(message['pm1p0']);
-      record[4] = valueOrInvalid(message['pm2p5']);
-      record[5] = valueOrInvalid(message['pm10p0']);
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);
     }
     else if(model === 'model P'){
-      record[4] = valueOrInvalid(message['pm1p0']);
-      record[5] = valueOrInvalid(message['pm2p5']);
-      record[6] = valueOrInvalid(message['pm10p0']);      
+      record[4] = valueOrInvalid(message.pm1p0);
+      record[5] = valueOrInvalid(message.pm2p5);
+      record[6] = valueOrInvalid(message.pm10p0);      
     }
     else if(model === 'model Q'){
-      record[3] = valueOrInvalid(message['pm1p0']);
-      record[4] = valueOrInvalid(message['pm2p5']);
-      record[5] = valueOrInvalid(message['pm10p0']);      
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);      
     }
     else if(model === 'model R'){
-      record[3] = valueOrInvalid(message['pm1p0']);
-      record[4] = valueOrInvalid(message['pm2p5']);
-      record[5] = valueOrInvalid(message['pm10p0']);      
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);      
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0){
-    record[getRecordLengthByModelType(model, hasPressure)-4] = valueOrInvalid(message['pressure']);
-    if((record[getRecordLengthByModelType(model, hasPressure)-1] === undefined) && !!message['altitude']){
-      record[getRecordLengthByModelType(model, hasPressure)-1] = valueOrInvalid(message['altitude']);
+    record[getRecordLengthByModelType(model, hasPressure)-4] = valueOrInvalid(message.pressure);
+    if((record[getRecordLengthByModelType(model, hasPressure)-1] === undefined) && !!message.altitude){
+      record[getRecordLengthByModelType(model, hasPressure)-1] = valueOrInvalid(message.altitude);
     }
   }
   else if(message.topic.indexOf("/orgs/wd/aqe/co2") >= 0){
@@ -480,10 +479,10 @@ let addMessageToRecord = (message, model, compensated, instantaneous, record, ha
   }
 };
 
-let refineModelType = (modelType, data) => {
+const refineModelType = (modelType, data) => {
   switch(modelType){
   case 'model C': // model C must be disambiguated based on message content
-    let dat = data.find(v => v.topic.indexOf('particulate') >= 0);
+    const dat = data.find(v => v.topic.indexOf('particulate') >= 0);
     if(dat){
       if(dat.pm1p0){
         return 'model N';
@@ -494,19 +493,19 @@ let refineModelType = (modelType, data) => {
   return modelType;
 };
 
-let getEggModelType = (dirname, extantTopics) => {
+const getEggModelType = (dirname, extantTopics) => {
   let serialNumber = dirname.split("_");
   serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
-  let hasCO2 = extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0;
-  let hasVOC = extantTopics.indexOf("/orgs/wd/aqe/voc") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/voc/" + serialNumber) >= 0;
-  let hasCO = extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0;
-  let hasNO2 = extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0;
-  let hasSO2 = extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0;
-  let hasO3 = extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0;
-  let hasParticulate = extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0;
-  let has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC].reverse();
-  let modelCode = has.reduce((t,v) => { 
+  const hasCO2 = extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0;
+  const hasVOC = extantTopics.indexOf("/orgs/wd/aqe/voc") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/voc/" + serialNumber) >= 0;
+  const hasCO = extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0;
+  const hasNO2 = extantTopics.indexOf("/orgs/wd/aqe/no2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/no2/" + serialNumber) >= 0;
+  const hasSO2 = extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0;
+  const hasO3 = extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0;
+  const hasParticulate = extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0;
+  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC].reverse();
+  const modelCode = has.reduce((t,v) => { 
     return t * 2 + (v ? 1 : 0);
   }, 0); 
   // modelCode will be a unique value depending on the combination of bits that are set
@@ -536,8 +535,8 @@ let getEggModelType = (dirname, extantTopics) => {
   }
 };
 
-let getRecordLengthByModelType = (modelType, hasPressure) => {
-  let additionalFields = hasPressure ? 1 : 0;
+const getRecordLengthByModelType = (modelType, hasPressure) => {
+  const additionalFields = hasPressure ? 1 : 0;
 
   switch(modelType){
   case 'model A':
@@ -571,12 +570,13 @@ let getRecordLengthByModelType = (modelType, hasPressure) => {
   case 'model R':
     return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, no2, no2_raw, lat, lng, alt + [pressure]
   case 'model H': // base model
+    return 6 + additionalFields;    
   default: 
     return 6 + additionalFields;
   }
 };
 
-let determineTimebase = (dirname, items, uniqueTopics) => {
+const determineTimebase = (dirname, items, uniqueTopics) => {
   let serialNumber = dirname.split("_");
   serialNumber = serialNumber[serialNumber.length - 1];
   let temperatureTopic = null;
@@ -601,7 +601,7 @@ let determineTimebase = (dirname, items, uniqueTopics) => {
       lastTime = moment(item.timestamp);
     }
     else{
-      let currentTimestamp = moment(item.timestamp);
+      const currentTimestamp = moment(item.timestamp);
       timeDiffs.push(currentTimestamp.diff(lastTime, "milliseconds"));
       lastTime = currentTimestamp;
     }
@@ -609,8 +609,8 @@ let determineTimebase = (dirname, items, uniqueTopics) => {
 
   // determine the standard deviation of the time differences
   // filter out any that are outside 1 standard deviation from the mean
-  let stdev = jStat.stdev(timeDiffs);
-  let mean = jStat.mean(timeDiffs);
+  const stdev = jStat.stdev(timeDiffs);
+  const mean = jStat.mean(timeDiffs);
   // remove outliers
   timeDiffs = timeDiffs.filter( (diff) => {
     return (diff >= mean - stdev) && (diff <= mean + stdev);
@@ -620,7 +620,7 @@ let determineTimebase = (dirname, items, uniqueTopics) => {
   return jStat.mean(timeDiffs);
 };
 
-let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
+  const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
   if(!temperatureUnits){
     temperatureUnits = "???";
   }
@@ -671,6 +671,8 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V],no2[ppb],no2[V]";
     break;    
   case "model H": // base model
+    headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
+    break;
   default:
     headerRow = headerRow.slice(0,-1); // remove the trailing comma since ther are no additional fields
     break;
@@ -684,13 +686,13 @@ let appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
   fs.appendFileSync(filepath, headerRow);
 };
 
-let getTemperatureUnits = (items) => {
+const getTemperatureUnits = (items) => {
   for(let ii = 0; ii < items.length; ii++){
-    let item = items[ii];
+    const item = items[ii];
     if(item.topic.indexOf("temperature") >= 0){
       return item["converted-units"];
     }
-  };
+  }
 };
 
 // possible options for format are 'csv' and 'influx'
@@ -701,8 +703,8 @@ let getTemperatureUnits = (items) => {
 //   fields: {field_key: field_value, ... },
 //   timestamp: Date
 // }
-let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
-   let r = record.slice();
+const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
+   const r = record.slice();
    if(format === 'csv'){
      r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
      let num_non_trivial_fields = 0;
@@ -727,7 +729,7 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        modelType = "unknown"; //could have no2 or so2 in it otherwise
      }
 
-     let modelInfluxFieldsMap = {
+     const modelInfluxFieldsMap = {
        "model A" : ["","temperature","humidity","no2","co","no2_raw","co_raw","latitude","longitude","altitude"],
        "model B" : ["","temperature","humidity","so2","o3","so2_raw","o3_raw","latitude","longitude","altitude"],
        "model C" : ["","temperature","humidity","particulate","particulate_raw","latitude","longitude","altitude"],
@@ -746,7 +748,7 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
        "unknown" : ["","temperature","humidity","latitude","longitude","altitude"]
      };
 
-     let modelInfluxTagsMap = {
+     const modelInfluxTagsMap = {
        "model A" : ["",tempUnits,"%","ppb","ppm","V","V","deg","deg","m"],
        "model B" : ["",tempUnits,"%","ppb","ppb","V","V","deg","deg","m"],
        "model C" : ["",tempUnits,"%","ug/m^3","V","deg","deg","m"],
@@ -778,7 +780,7 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
      }
 
      if(moment(r[0]).isValid()){
-       let influxRecord = {
+       const influxRecord = {
          measurement: 'egg_data',
          tags: {},
          fields: {},
@@ -790,22 +792,23 @@ let convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUnit
          if(r[i] !== undefined){
            num_non_trivial_fields++;
            let fields = modelInfluxFieldsMap[modelType][i];
-           fields = fields ? fields.split('|') : [] // field becomes an array no matter what
-           let tag = modelInfluxTagsMap[modelType][i];
+           fields = fields ? fields.split('|') : []; // field becomes an array no matter what
+           const tag = modelInfluxTagsMap[modelType][i];
            if(fields.length){
-             fields.forEach((field) => {
-              influxRecord.fields[field] = influxRecord.fields[field] || +r[i];
-              if(tag){
-                influxRecord.tags[field + '_units'] = tag;
-              }
-             });
+             for(let j = 0; j < fields.length; j++){
+               const field = fields[j];
+               influxRecord.fields[field] = influxRecord.fields[field] || +r[i];
+               if(tag){
+                 influxRecord.tags[field + '_units'] = tag;
+               }               
+             }
            }
          }
        }
 
        if(num_non_trivial_fields > 0){
          if(serial){
-           influxRecord.tags['serial_number'] = serial;
+           influxRecord.tags.serial_number = serial;
          }
 
          if(rowsWritten > 0){
@@ -828,10 +831,10 @@ queue.process('stitch', 3, (job, done) => {
   //    email     - the email address that should be notified on zip completed
   //    sequence  - the sequence number within this request chain
 
-  let skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
+  const skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if(!skipJob){
     // 1. for each folder in save_path, create an empty csv file with the same name
-    let dir = job.data.serials[0];
+    const dir = job.data.serials[0];
     let extension = 'csv';
     if(job.data.stitch_format){
       switch(job.data.stitch_format){
@@ -855,7 +858,7 @@ queue.process('stitch', 3, (job, done) => {
     let modelType = null;
     let temperatureUnits = null;
     let hasPressure = false;
-    let temperatureItems = [] // for the benefit of determineTimebase
+    const temperatureItems = []; // for the benefit of determineTimebase
     let rowsWritten = 0;
     let totalMessages = 0;
     let messagesProcessed = 0;
@@ -876,7 +879,7 @@ queue.process('stitch', 3, (job, done) => {
     return promiseDoWhilst(() => {
       // do this
       return new Promise((resolve, reject) => {
-        let currentFile = firstPassAllFiles.shift();
+        const currentFile = firstPassAllFiles.shift();
         let serialNumber = dir.split("_");
         serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
 
@@ -977,13 +980,13 @@ queue.process('stitch', 3, (job, done) => {
       }
 
       if(allFiles.length > 0){
-        console.log("Starting main loop for Job")
+        console.log("Starting main loop for Job");
         return promiseDoWhilst(() => {
           // do this action...
-          let filename = allFiles.shift();
+          const filename = allFiles.shift();
 
-          let fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
-          let data = require(fullPathToFile);
+          const fullPathToFile = `${job.data.save_path}/${dir}/${filename}`;
+          const data = require(fullPathToFile);
           let index = 0;
 
           modelType = refineModelType(modelType, data);
@@ -1001,22 +1004,22 @@ queue.process('stitch', 3, (job, done) => {
             return promiseDoWhilst(() => {
               // do this action...
               return new Promise((resolve, reject) => {
-                let res = resolve;
-                let rej = reject;
+                const res = resolve;
+                const rej = reject;
                 setTimeout(() => {
                   try{
-                    let datum = data.shift();
+                    const datum = data.shift();
                     // console.log(datum, index, currentRecord, modelType);
 
                     if(index === 0){
                       // special case, use this timestamp
-                      let natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
+                      const natural_topic = datum.topic.replace(`/${datum['serial-number']}`, '');
                       if(known_topic_prefixes.indexOf(natural_topic) >= 0 && (currentRecord[0] === undefined)){
                         currentRecord[0] = datum.timestamp;
                       }
                     }
 
-                    let timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
+                    const timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
 
                     // if datum falls within current record, then just add it
                     if(timeToPreviousMessage < timeBase / 2){
@@ -1052,14 +1055,14 @@ queue.process('stitch', 3, (job, done) => {
                     res();
                   }
                   catch(err){
-                    console.log(err.message, err.stack)
+                    console.log(err.message, err.stack);
                     rej(err);
                   }
                 }, 0);
               });
             }, () => {
               // ... while this condition is true
-              return data.length > 0
+              return data.length > 0;
             });
           }
           else{
@@ -1120,22 +1123,22 @@ queue.process('stitch', 3, (job, done) => {
   }
 });
 
-let generateNextJob = (job) => {
-  let serials = job.data.serials.slice(1);
+const generateNextJob = (job) => {
+  const serials = job.data.serials.slice(1);
   if(serials.length > 0){
-    let job2 = queue.create('stitch', {
-        title: 'stitching data for ' + serials[0]
-      , save_path: job.data.save_path
-      , original_serials: job.data.original_serials.slice()
-      , original_url: job.data.original_url
-      , serials: serials
-      , user_id: job.data.user_id
-      , email: job.data.email
-      , compensated: job.data.compensated
-      , instantaneous: job.data.instantaneous
-      , utcOffset: job.data.utcOffset
-      , zipfilename: job.data.zipfilename
-      , bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
+    const job2 = queue.create('stitch', {
+      title: 'stitching data for ' + serials[0],
+      save_path: job.data.save_path,
+      original_serials: job.data.original_serials.slice(),
+      original_url: job.data.original_url,
+      serials: serials,
+      user_id: job.data.user_id,
+      email: job.data.email,
+      compensated: job.data.compensated,
+      instantaneous: job.data.instantaneous,
+      utcOffset: job.data.utcOffset,
+      zipfilename: job.data.zipfilename,
+      bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
     })
     .priority('high')
     .attempts(1)
@@ -1143,22 +1146,22 @@ let generateNextJob = (job) => {
   }
   else{
     // before declaring we are done, create a job to zip the results up
-    let job2 = queue.create('zip', {
-      title: 'zipping folder ' + job.data.save_path
-      , serials: serials
-      , original_serials: job.data.original_serials.slice()
-      , original_url: job.data.original_url
-      , save_path: job.data.save_path
-      , user_id: job.data.user_id
-      , email: job.data.email
-      , zipfilename: job.data.zipfilename
-      , bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
+    const job2 = queue.create('zip', {
+      title: 'zipping folder ' + job.data.save_path,
+      serials: serials,
+      original_serials: job.data.original_serials.slice(),
+      original_url: job.data.original_url,
+      save_path: job.data.save_path,
+      user_id: job.data.user_id,
+      email: job.data.email,
+      zipfilename: job.data.zipfilename,
+      bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
     })
     .priority('high')
     .attempts(1)
     .save();
   }
-}
+};
 
 process.once( 'uncaughtException', function(err){
   console.error( 'Something bad happened: ', err.message, err.stack );
