@@ -222,6 +222,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[9] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model S') {
+      if (!compensated && !instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
     if (model === 'model B') {
@@ -240,6 +258,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       else if (compensated && instantaneous) {
         record[3] = valueOrInvalid(message['compensated-value']);
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+    else if (model === 'model S') {
+      if (!compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
   }
@@ -280,6 +316,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       }
     }
     else if (model === 'model R') {
+      if (!compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+    else if (model === 'model T') {
       if (!compensated && !instantaneous) {
         record[6] = valueOrInvalid(message['compensated-value']);
         record[7] = valueOrInvalid(message['raw-value']);
@@ -348,6 +402,16 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[5] = valueOrInvalid(message.pm10p0);
     }
     else if (model === 'model R') {
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);
+    }
+    else if (model === 'model S') {
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);
+    }
+    else if (model === 'model T') {
       record[3] = valueOrInvalid(message.pm1p0);
       record[4] = valueOrInvalid(message.pm2p5);
       record[5] = valueOrInvalid(message.pm10p0);
@@ -428,6 +492,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       else if (compensated && instantaneous) {
         record[6] = valueOrInvalid(message['compensated-value']);
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+    else if (model === 'model T') {
+      if (!compensated && !instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[8] = valueOrInvalid(message['compensated-value']);
+        record[9] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
   }
@@ -527,6 +609,8 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b1110000: return 'model P'; // co2 + pm + voc
     case 0b10011: return 'model Q'; // pm + co + no2 
     case 0b11001: return 'model R'; // pm + o3 + no2
+    case 0b10101: return 'model S'; // pm + so2 + no2
+    case 0b11010: return 'model T'; // pm + co + o3
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: ${modelCode}`);
@@ -569,6 +653,10 @@ const getRecordLengthByModelType = (modelType, hasPressure) => {
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, co_raw, co, no2, no2_raw, lat, lng, alt + [pressure]
     case 'model R':
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, no2, no2_raw, lat, lng, alt + [pressure]
+    case 'model S':
+      return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, so2_raw, so2, no2_raw, no2,lat, lng, alt + [pressure]
+    case 'model T':
+      return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, co_raw, co, lat, lng, alt + [pressure]      
     case 'model H': // base model
       return 6 + additionalFields;
     default:
@@ -670,6 +758,12 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     case "model R":
       headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V],no2[ppb],no2[V]";
       break;
+    case "model S":
+      headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],so2[ppb],so2[V],no2[ppb],no2[V]";
+      break;
+    case "model T":
+      headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V],co[ppm],co[V]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -745,6 +839,8 @@ const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUn
       "model P": ["", "temperature", "humidity", "co2", "pm1p0", "pm2p5", "pm10p0", "eco2|co2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
       "model Q": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model R": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "co", "co_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
+      "model S": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "so2", "so2_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
+      "model T": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "co", "co_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -764,6 +860,8 @@ const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUn
       "model P": ["", tempUnits, "%", "ppm", "ug/m^3", "ug/m^3", "ug/m^3", "ppm", "ppb", "ohms", "deg", "deg", "m"],
       "model Q": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppm", "V", "ppb", "V", "deg", "deg", "m"],
       "model R": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
+      "model S": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
+      "model T": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
 
