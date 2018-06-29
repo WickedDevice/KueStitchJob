@@ -597,7 +597,7 @@ const refineModelType = (modelType, data) => {
 const getEggModelType = (dirname, extantTopics) => {
   let serialNumber = dirname.split("_");
   serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
-
+  console.log(extantTopics);
   const hasCO2 = extantTopics.indexOf("/orgs/wd/aqe/co2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co2/" + serialNumber) >= 0;
   const hasVOC = extantTopics.indexOf("/orgs/wd/aqe/voc") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/voc/" + serialNumber) >= 0;
   const hasCO = extantTopics.indexOf("/orgs/wd/aqe/co") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/co/" + serialNumber) >= 0;
@@ -607,9 +607,8 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasParticulate = extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0;
   const hasConductivity = extantTopics.indexOf("/orgs/wd/aqe/water/conductivity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/conductivity/" + serialNumber) >= 0;
   const hasPh = extantTopics.indexOf("/orgs/wd/aqe/water/ph") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/ph/" + serialNumber) >= 0;
-  const hasWaterTemperature = extantTopics.indexOf("/orgs/wd/aqe/water/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/temperature/" + serialNumber) >= 0;
   const hasTurbidity = extantTopics.indexOf("/orgs/wd/aqe/water/turbidity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/turbidity/" + serialNumber) >= 0;
-  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasWaterTemperature, hasTurbidity].reverse();
+  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
   }, 0);
@@ -634,10 +633,10 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b11001: return 'model R'; // pm + o3 + no2
     case 0b10101: return 'model S'; // pm + so2 + no2
     case 0b11010: return 'model T'; // pm + co + o3
-    case 0b11110000000: return 'model W'; // conductivity + pH + turbidity + water temperature
+    case 0b1110000000: return 'model W'; // conductivity + pH + turbidity + water temperature
     default:
       if (modelCode !== 0b0) {
-        console.log(`Unexpected Model Code: ${modelCode}`);
+        console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
       }
       return 'model H'; // base model
   }
