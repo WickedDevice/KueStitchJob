@@ -46,7 +46,11 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/particulate",
   "/orgs/wd/aqe/co2",
   "/orgs/wd/aqe/voc",
-  "/orgs/wd/aqe/pressure"
+  "/orgs/wd/aqe/pressure",
+  "/orgs/wd/aqe/water/temperature",
+  "/orgs/wd/aqe/water/conductivity",
+  "/orgs/wd/aqe/water/turbidity",
+  "/orgs/wd/aqe/water/ph"
 ];
 
 const invalid_value_string = "---";
@@ -559,6 +563,21 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       }
     }
   }
+  else if (message.topic.indexOf("/orgs/wd/aqe/water/temperature") >= 0) {
+    record[1] = valueOrInvalid(message.value);
+  }
+  else if (message.topic.indexOf("/orgs/wd/aqe/water/conductivity") >= 0) {
+    record[2] = valueOrInvalid(message.value);
+    record[3] = valueOrInvalid(message['raw-value']);
+  }
+  else if (message.topic.indexOf("/orgs/wd/aqe/water/turbidity") >= 0) {
+    record[4] = valueOrInvalid(message.value);
+    record[5] = valueOrInvalid(message['raw-value']);    
+  }
+  else if (message.topic.indexOf("/orgs/wd/aqe/water/ph") >= 0) {
+    record[6] = valueOrInvalid(message.value);
+    record[7] = valueOrInvalid(message['raw-value']);    
+  }
 };
 
 const refineModelType = (modelType, data) => {
@@ -586,7 +605,11 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasSO2 = extantTopics.indexOf("/orgs/wd/aqe/so2") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/so2/" + serialNumber) >= 0;
   const hasO3 = extantTopics.indexOf("/orgs/wd/aqe/o3") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/o3/" + serialNumber) >= 0;
   const hasParticulate = extantTopics.indexOf("/orgs/wd/aqe/particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/particulate/" + serialNumber) >= 0;
-  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC].reverse();
+  const hasConductivity = xtantTopics.indexOf("/orgs/wd/aqe/water/conductivity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/conductivity/" + serialNumber) >= 0;
+  const hasPh = xtantTopics.indexOf("/orgs/wd/aqe/water/ph") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/ph/" + serialNumber) >= 0;
+  const hasWaterTemperature = xtantTopics.indexOf("/orgs/wd/aqe/water/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/temperature/" + serialNumber) >= 0;
+  const hasTurbidity = xtantTopics.indexOf("/orgs/wd/aqe/water/turbidity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/turbidity/" + serialNumber) >= 0;
+  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasWaterTemperature, hasTurbidity].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
   }, 0);
@@ -611,6 +634,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b11001: return 'model R'; // pm + o3 + no2
     case 0b10101: return 'model S'; // pm + so2 + no2
     case 0b11010: return 'model T'; // pm + co + o3
+    case 0b11110000000: return 'model W'; // conductivity + pH + turbidity + water temperature
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: ${modelCode}`);
@@ -657,6 +681,8 @@ const getRecordLengthByModelType = (modelType, hasPressure) => {
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, so2_raw, so2, no2_raw, no2,lat, lng, alt + [pressure]
     case 'model T':
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, co_raw, co, lat, lng, alt + [pressure]      
+    case 'model W': 
+      return 11 + additionalFields; // time, temp, conductivity, conductivity_raw, turbidity, turbidity_raw, ph, ph_raw, lat, lng, alt + [pressure]
     case 'model H': // base model
       return 6 + additionalFields;
     default:
@@ -764,6 +790,10 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     case "model T":
       headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V],co[ppm],co[V]";
       break;
+    case "model W": 
+      headerRow = `timestamp,temperature[${temperatureUnits}],`;
+      headerRow += "conductivity[mS/cm], conductivity_raw[V], turbidity[NTU], turbidity_raw[V], ph[n/a], ph_raw[V]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -784,7 +814,7 @@ const getTemperatureUnits = (items) => {
   for (let ii = 0; ii < items.length; ii++) {
     const item = items[ii];
     if (item.topic.indexOf("temperature") >= 0) {
-      return item["converted-units"];
+      return item["converted-units"] || item.units || "degC";
     }
   }
 };
@@ -841,6 +871,7 @@ const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUn
       "model R": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "co", "co_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model S": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "so2", "so2_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model T": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "co", "co_raw", "latitude", "longitude", "altitude"],
+      "model W": ["", "temperature", "conductivity", "conductivity_raw", "turbidity", "turbidity_raw", "ph", "ph_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -862,6 +893,7 @@ const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUn
       "model R": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
       "model S": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
       "model T": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
+      "model W": ["", tempUnits, "mS/cm", "V", "NTU", "V", "n/a", "V", "deg", "deg", "m"],
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
 
@@ -1148,6 +1180,7 @@ queue.process('stitch', 3, (job, done) => {
                     }
                     messagesProcessed++;
                     job.progress(messagesProcessed, totalMessages);
+                    console.log(messagesProcessed, totalMessages);
                     index++;
                     // console.log("Resolving promise...");
                     res();
