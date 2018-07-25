@@ -282,6 +282,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model U') {
+      if (!compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }    
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/o3") >= 0) {
     if (model === 'model B') {
@@ -581,15 +599,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
 };
 
 const refineModelType = (modelType, data) => {
+  let dat;
   switch (modelType) {
     case 'model C': // model C must be disambiguated based on message content
-      const dat = data.find(v => v.topic.indexOf('particulate') >= 0);
+      dat = data.find(v => v.topic.indexOf('particulate') >= 0);
       if (dat) {
         if (dat.pm1p0) {
           return 'model N';
         }
       }
       break;
+    case 'model U': 
+      dat = data.find(v => v.topic.indexOf('so2') >= 0);
+      if (dat) {
+        if (dat['raw-value2']) {
+          return 'model Y';
+        }
+      }
+      break;    
   }
   return modelType;
 };
@@ -633,7 +660,9 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b11001: return 'model R'; // pm + o3 + no2
     case 0b10101: return 'model S'; // pm + so2 + no2
     case 0b11010: return 'model T'; // pm + co + o3
-    case 0b1110000000: return 'model W'; // conductivity + pH + turbidity + water temperature
+    case 0b10100: return 'model U'; // pm + so2 NOTE: there is actually a conflict between U and Y here
+    case 0b1100000: return 'model V'; // co2 + voc
+    case 0b1110000000: return 'model W'; // conductivity + pH + turbidity + water temperature    
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -655,7 +684,7 @@ const getRecordLengthByModelType = (modelType, hasPressure) => {
     case 'model D':
       return 7 + additionalFields; // time, temp, hum, co2, lat, lng, alt + [pressure]
     case 'model E':
-      return 9 + additionalFields; // time, temp, hum, co2, voc, resistance, lat, lng, alt + [pressure]
+      return 9 + additionalFields; // time, temp, hum, eco2, voc, resistance, lat, lng, alt + [pressure]
     case 'model G':
       return 10 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
     case 'model J':
@@ -680,8 +709,14 @@ const getRecordLengthByModelType = (modelType, hasPressure) => {
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, so2_raw, so2, no2_raw, no2,lat, lng, alt + [pressure]
     case 'model T':
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, co_raw, co, lat, lng, alt + [pressure]      
+    case 'model U': // SO2 (kwj) + PM
+      return 11 + additionalFields; // time, temp, hum, so2, so2_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]      
+    case 'model V': // CO2 + VOC
+      return 10 + additionalFields; // time, temp, hum, co2, eco2, voc, resistance, lat, lng, alt + [pressure]
     case 'model W': 
       return 11 + additionalFields; // time, temp, conductivity, conductivity_raw, turbidity, turbidity_raw, ph, ph_raw, lat, lng, alt + [pressure]
+    case 'model Y': // SO2 (alphasense) + PM
+      return 12 + additionalFields; // time, temp, hum, so2, so2_raw, so2_raw2, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]            
     case 'model H': // base model
       return 6 + additionalFields;
     default:
@@ -789,10 +824,19 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure) => {
     case "model T":
       headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V],co[ppm],co[V]";
       break;
+    case "model U":
+      headerRow += "so2[ppb],so2[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+      break;      
+    case "model V":
+      headerRow += "co2[ppm],eco2[ppm],tvoc[ppb],resistance[ohm]";
+      break;      
     case "model W": 
       headerRow = `timestamp,temperature[${temperatureUnits}],`;
       headerRow += "conductivity[mS/cm], conductivity_raw[V], turbidity[NTU], turbidity_raw[V], ph[n/a], ph_raw[V]";
       break;
+    case "model Y":
+      headerRow += "so2[ppb],so2_we[V],so2_aux[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+      break;            
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -870,7 +914,10 @@ const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUn
       "model R": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "co", "co_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model S": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "so2", "so2_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model T": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "co", "co_raw", "latitude", "longitude", "altitude"],
+      "model U": ["", "temperature", "humidity", "so2", "so2_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],      
+      "model V": ["", "temperature", "humidity", "co2", "eco2", "voc", "voc_raw", "latitude", "longitude", "altitude"],      
       "model W": ["", "temperature", "conductivity", "conductivity_raw", "turbidity", "turbidity_raw", "ph", "ph_raw", "latitude", "longitude", "altitude"],
+      "model Y": ["", "temperature", "humidity", "so2", "so2_raw", "so2_raw2", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -892,7 +939,10 @@ const convertRecordToString = (record, modelType, hasPressure, utcOffset, tempUn
       "model R": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
       "model S": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
       "model T": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
+      "model U": ["", tempUnits, "%", "ppb", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],      
+      "model V": ["", tempUnits, "%", "ppm", "ppm", "ppb", "ohms", "deg", "deg", "m"],
       "model W": ["", tempUnits, "mS/cm", "V", "NTU", "V", "n/a", "V", "deg", "deg", "m"],
+      "model Y": ["", tempUnits, "%", "ppb", "V", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],      
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
 
