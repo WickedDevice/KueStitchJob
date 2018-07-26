@@ -191,6 +191,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model M') {
+      if (!compensated && !instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
     else if (model === 'model Q') {
       if (!compensated && !instantaneous) {
         record[8] = valueOrInvalid(message['compensated-value']);
@@ -431,6 +449,11 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[6] = valueOrInvalid(message.pm2p5);
       record[7] = valueOrInvalid(message.pm10p0);
     }
+    else if (model === 'model M') {
+      record[4] = valueOrInvalid(message.pm1p0);
+      record[5] = valueOrInvalid(message.pm2p5);
+      record[6] = valueOrInvalid(message.pm10p0);
+    }    
     else if (model === 'model N') {
       record[3] = valueOrInvalid(message.pm1p0);
       record[4] = valueOrInvalid(message.pm2p5);
