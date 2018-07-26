@@ -872,7 +872,7 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
       headerRow += "co[ppm],co[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
       break;
     case "model M":
-      headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],co2[ppm],no2[ppb],no2[V]";
+      headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],no2[ppb],no2[V]";
       break;
     case "model N":
       headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
