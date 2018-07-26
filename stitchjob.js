@@ -284,22 +284,44 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
     else if (model === 'model U') {
       if (!compensated && !instantaneous) {
-        record[6] = valueOrInvalid(message['compensated-value']);
-        record[7] = valueOrInvalid(message['raw-value']);
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
       }
       else if (compensated && !instantaneous) {
-        record[6] = valueOrInvalid(message['compensated-value']);
-        record[7] = valueOrInvalid(message['raw-value']);
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
       }
       else if (!compensated && instantaneous) {
-        record[6] = valueOrInvalid(message['compensated-value']);
-        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
       else if (compensated && instantaneous) {
-        record[6] = valueOrInvalid(message['compensated-value']);
-        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }    
+    else if (model === 'model Y') {
+      if (!compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['converted-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+        record[5] = valueOrInvalid(message['raw-value2']);
+      }
+      else if (compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+        record[5] = valueOrInvalid(message['raw-value2']);
+      }
+      else if (!compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['converted-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value2'] || message['raw-value2']);
+      }
+      else if (compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value2'] || message['raw-value2']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/o3") >= 0) {
     if (model === 'model B') {
@@ -438,6 +460,16 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[4] = valueOrInvalid(message.pm2p5);
       record[5] = valueOrInvalid(message.pm10p0);
     }
+    else if (model === 'model U') {
+      record[5] = valueOrInvalid(message.pm1p0);
+      record[6] = valueOrInvalid(message.pm2p5);
+      record[7] = valueOrInvalid(message.pm10p0);
+    }
+    else if (model === 'model Y') {
+      record[6] = valueOrInvalid(message.pm1p0);
+      record[7] = valueOrInvalid(message.pm2p5);
+      record[8] = valueOrInvalid(message.pm10p0);
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
     record[getRecordLengthByModelType(model, hasPressure) - 4] = valueOrInvalid(message.pressure);
@@ -446,7 +478,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
-    if (['model D', 'model G', 'model M', 'model P'].indexOf(model) >= 0) {
+    if (['model D', 'model G', 'model M', 'model P', 'model V'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -578,6 +610,28 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['compensated-instant-co2']);
         record[8] = valueOrInvalid(message['compensated-instant-tvoc']);
         record[9] = valueOrInvalid(message['compensated-instant-resistance']);
+      }
+    }
+    else if (model === 'model V') {
+      if (!compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['converted-co2']);
+        record[5] = valueOrInvalid(message['converted-tvoc']);
+        record[6] = valueOrInvalid(message['converted-resistance']);
+      }
+      else if (compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-co2']);
+        record[5] = valueOrInvalid(message['compensated-tvoc']);
+        record[6] = valueOrInvalid(message['compensated-resistance']);
+      }
+      else if (!compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['raw-instant-co2']);
+        record[5] = valueOrInvalid(message['raw-instant-tvoc']);
+        record[6] = valueOrInvalid(message['raw-instant-resistance']);
+      }
+      else if (compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-instant-co2']);
+        record[5] = valueOrInvalid(message['compensated-instant-tvoc']);
+        record[6] = valueOrInvalid(message['compensated-instant-resistance']);
       }
     }
   }
