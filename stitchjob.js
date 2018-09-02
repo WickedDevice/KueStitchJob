@@ -414,6 +414,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AB') {
+      if (!compensated && !instantaneous) {
+        record[9] = valueOrInvalid(message['compensated-value']);
+        record[10] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[9] = valueOrInvalid(message['compensated-value']);
+        record[10] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[9] = valueOrInvalid(message['compensated-value']);
+        record[10] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[9] = valueOrInvalid(message['compensated-value']);
+        record[10] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
@@ -499,6 +517,16 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[4] = valueOrInvalid(message.pm2p5);
       record[5] = valueOrInvalid(message.pm10p0);
     }
+    else if (model === 'model AA') {
+      record[4] = valueOrInvalid(message.pm1p0);
+      record[5] = valueOrInvalid(message.pm2p5);
+      record[6] = valueOrInvalid(message.pm10p0);
+    }
+    else if (model === 'model AB') {
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
     let pressureIndex = -4;
@@ -514,7 +542,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(message['converted-value']);
   }  
   else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
-    if (['model D', 'model G', 'model M', 'model P', 'model V'].indexOf(model) >= 0) {
+    if (['model D', 'model G', 'model M', 'model P', 'model V', 'model AA'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -600,6 +628,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       else if (compensated && instantaneous) {
         record[8] = valueOrInvalid(message['compensated-value']);
         record[9] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+    else if (model === 'model AA') {
+      if (!compensated && !instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[7] = valueOrInvalid(message['compensated-value']);
+        record[8] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
   }
@@ -692,6 +738,28 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[8] = valueOrInvalid(message['compensated-instant-resistance']);
       }      
     }
+    else if (model === 'model AB')  {
+      if (!compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['converted-co2']);
+        record[7] = valueOrInvalid(message['converted-tvoc']);
+        record[8] = valueOrInvalid(message['converted-resistance']);
+      }
+      else if (compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-co2']);
+        record[7] = valueOrInvalid(message['compensated-tvoc']);
+        record[8] = valueOrInvalid(message['compensated-resistance']);
+      }
+      else if (!compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['raw-instant-co2']);
+        record[7] = valueOrInvalid(message['raw-instant-tvoc']);
+        record[8] = valueOrInvalid(message['raw-instant-resistance']);
+      }
+      else if (compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-instant-co2']);
+        record[7] = valueOrInvalid(message['compensated-instant-tvoc']);
+        record[8] = valueOrInvalid(message['compensated-instant-resistance']);
+      }      
+    }    
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/water/temperature") >= 0) {
     record[1] = valueOrInvalid(message.value);
@@ -776,6 +844,8 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b1100000: return 'model V'; // co2 + voc
     case 0b1110000000: return 'model W'; // conductivity + pH + turbidity + water temperature
     case 0b1010000: return 'model Z'; // pm + voc 
+    case 0b110010: return 'model AA'; // co2 + particulate + co
+    case 0b1011000: return 'model AB'; // pm + voc + o3
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -838,6 +908,10 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 12 + additionalFields; // time, temp, hum, so2, so2_raw, so2_raw2, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]            
     case 'model Z': // pm + voc
       return 12 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, eco2, voc, res, lat, lng, alt + [pressure]
+    case 'model AA':
+      return 12 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, co, co_raw, lat, lng, alt + [pressure]      
+    case 'model AB': // pm + voc + o3
+      return 14 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, eco2, voc, res, o3, o3_raw, lat, lng, alt + [pressure]      
     case 'model H': // base model
       return 6 + additionalFields;
     default:
@@ -961,6 +1035,12 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     case "model Z":
       headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],eco2[ppm],tvoc[ppb],resistance[ohm]";
       break;          
+    case "model AA":
+      headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],co[ppm],co[V]";
+      break;
+    case "model AB":
+      headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],eco2[ppm],tvoc[ppb],resistance[ohm],o3[ppb],o3[V]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1046,6 +1126,8 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model W": ["", "temperature", "conductivity", "conductivity_raw", "turbidity", "turbidity_raw", "ph", "ph_raw", "latitude", "longitude", "altitude"],
       "model Y": ["", "temperature", "humidity", "so2", "so2_raw", "so2_raw2", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
       "model Z": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "eco2|co2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
+      "model AA": ["", "temperature", "humidity", "co2", "pm1p0", "pm2p5", "pm10p0", "co", "co_raw", "latitude", "longitude", "altitude"],
+      "model AB": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "eco2|co2", "voc", "voc_raw", "o3", "o3_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1072,6 +1154,8 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model W": ["", tempUnits, "mS/cm", "V", "NTU", "V", "n/a", "V", "deg", "deg", "m"],
       "model Y": ["", tempUnits, "%", "ppb", "V", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],      
       "model Z": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppm", "ppb", "ohms", "deg", "deg", "m"],
+      "model AA": ["", tempUnits, "%", "ppm", "ug/m^3", "ug/m^3", "ug/m^3", "ppm", "ohms", "deg", "deg", "m"],
+      "model AB": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
 
