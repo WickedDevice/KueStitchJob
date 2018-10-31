@@ -884,7 +884,7 @@ const refineModelType = (modelType, data) => {
     case 'model C': // model C must be disambiguated based on message content
       dat = data.find(v => v.topic.indexOf('particulate') >= 0);
       if (dat) {
-        if (dat.pm1p0) {
+        if (dat.pm1p0 !== undefined) {
           return 'model N';
         }
       }
@@ -892,7 +892,7 @@ const refineModelType = (modelType, data) => {
     case 'model U': 
       dat = data.find(v => v.topic.indexOf('so2') >= 0);
       if (dat) {
-        if (dat['raw-value2']) {
+        if (dat['raw-value2'] !== undefined) {
           return 'model Y';
         }
       }
