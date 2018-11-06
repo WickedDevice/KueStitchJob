@@ -281,6 +281,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AF') {
+      if (!compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
     if (model === 'model B') {
@@ -949,6 +967,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b0101: return 'model AC'; // so2 + no2
     case 0b1000010: return 'model AD'; // voc + co
     case 0b111000: return 'model AE'; // co2 + pm + o3
+    case 0b1: return 'model AF'; // no2-only
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1007,6 +1026,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 10 + additionalFields; // time, temp, hum, co2, eco2, voc, resistance, lat, lng, alt + [pressure]
     case 'model W': 
       return 11 + additionalFields; // time, temp, conductivity, conductivity_raw, turbidity, turbidity_raw, ph, ph_raw, lat, lng, alt + [pressure]
+    case 'model AF': 
+      return 8 + additionalFields; // time, temp, hum, no2, no2_raw, lat, lng, alt + [pressure]
     case 'model Y': // SO2 (alphasense) + PM
       return 12 + additionalFields; // time, temp, hum, so2, so2_raw, so2_raw2, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]            
     case 'model Z': // pm + voc
@@ -1158,7 +1179,10 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
       break;
     case "model AE":
       headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V]";
-      break;                  
+      break;        
+    case "model AF":
+      headerRow += "no2[ppb],no2[V]";
+      break;          
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1249,6 +1273,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AC": ["", "temperature", "humidity", "so2", "so2_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],      
       "model AD": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "co", "co_raw", "latitude", "longitude", "altitude"],      
       "model AE": ["", "temperature", "humidity", "co2", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "latitude", "longitude", "altitude"],      
+      "model AF": ["", "temperature", "humidity", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
