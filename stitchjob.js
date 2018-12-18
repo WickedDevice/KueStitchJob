@@ -558,6 +558,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AJ') {
+      if (!compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
@@ -667,6 +685,11 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[8] = valueOrInvalid(message.pm1p0);
       record[9] = valueOrInvalid(message.pm2p5);
       record[10] = valueOrInvalid(message.pm10p0);
+    }
+    else if (model === 'model AJ') {
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
@@ -1076,34 +1099,35 @@ const getEggModelType = (dirname, extantTopics) => {
   // the rule is that 'new' sensor presence variables MUST be added to the end of the 'has' array
 
   switch (modelCode) {
-    case 0b11: return 'model A'; // no2 + co
-    case 0b1100: return 'model B'; // so2 + o3
-    case 0b10000: return 'model C'; // NOTE: there is actually a conflict between C and N here
-    case 0b100000: return 'model D'; // co2
+    case         0b11: return 'model A';  // no2 + co
+    case       0b1100: return 'model B';  // so2 + o3
+    case      0b10000: return 'model C';  // NOTE: there is actually a conflict between C and N here
+    case     0b100000: return 'model D';  // co2
     // case 0b1100000: // NOTE: this is just for data recorded before 3/27/2018
-    case 0b1000000: return 'model E'; // voc
-    case 0b110000: return 'model G'; // co2 + particulate
-    case 0b1001: return 'model J'; // Jerry model no2 + o3, could also be model AG
-    case 0b10001: return 'model K'; // no2 + particulate
-    case 0b10010: return 'model L'; // co + particulate
-    case 0b110001: return 'model M'; // co2 + pm + no2
-    case 0b1110000: return 'model P'; // co2 + pm + voc
-    case 0b10011: return 'model Q'; // pm + co + no2 
-    case 0b11001: return 'model R'; // pm + o3 + no2
-    case 0b10101: return 'model S'; // pm + so2 + no2
-    case 0b11010: return 'model T'; // pm + co + o3
-    case 0b10100: return 'model U'; // pm + so2 NOTE: there is actually a conflict between U and Y here
-    case 0b1100000: return 'model V'; // co2 + voc
-    case 0b1110000000: return 'model W'; // conductivity + pH + turbidity + water temperature
-    case 0b1010000: return 'model Z'; // pm + voc 
-    case 0b110010: return 'model AA'; // co2 + particulate + co
-    case 0b1011000: return 'model AB'; // pm + voc + o3
-    case 0b0101: return 'model AC'; // so2 + no2
-    case 0b1000010: return 'model AD'; // voc + co
-    case 0b111000: return 'model AE'; // co2 + pm + o3
-    case 0b1: return 'model AF'; // no2-only
-    case 0b1010010: return 'model AH'; // pm + voc + co
-    case 0b1010001: return 'model AI'; // pm + voc + no2
+    case    0b1000000: return 'model E';  // voc
+    case     0b110000: return 'model G';  // co2 + particulate
+    case       0b1001: return 'model J';  // Jerry model no2 + o3, could also be model AG
+    case      0b10001: return 'model K';  // no2 + particulate
+    case      0b10010: return 'model L';  // co + particulate
+    case     0b110001: return 'model M';  // co2 + pm + no2
+    case    0b1110000: return 'model P';  // co2 + pm + voc
+    case      0b10011: return 'model Q';  // pm + co + no2 
+    case      0b11001: return 'model R';  // pm + o3 + no2
+    case      0b10101: return 'model S';  // pm + so2 + no2
+    case      0b11010: return 'model T';  // pm + co + o3
+    case      0b10100: return 'model U';  // pm + so2 NOTE: there is actually a conflict between U and Y here
+    case    0b1100000: return 'model V';  // co2 + voc
+    case 0b1110000000: return 'model W';  // conductivity + pH + turbidity + water temperature
+    case    0b1010000: return 'model Z';  // pm + voc 
+    case     0b110010: return 'model AA'; // co2 + particulate + co
+    case    0b1011000: return 'model AB'; // pm + voc + o3
+    case       0b0101: return 'model AC'; // so2 + no2
+    case    0b1000010: return 'model AD'; // voc + co
+    case     0b111000: return 'model AE'; // co2 + pm + o3
+    case          0b1: return 'model AF'; // no2-only
+    case    0b1010010: return 'model AH'; // pm + voc + co
+    case    0b1010001: return 'model AI'; // pm + voc + no2
+    case      0b11000: return 'model AJ'; //pm + o3
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1188,6 +1212,9 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 14 + additionalFields; // time, temp, hum, eco2, voc, res, no2, no2_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]            
     case 'model H': // base model
       return 6 + additionalFields;
+    case 'model AJ': //  pm + o3  
+      return 11 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3, o3_raw, lat, lng, alt + [pressure]      
+
     default:
       return 6 + additionalFields;
   }
@@ -1335,7 +1362,10 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
       break;               
     case "model AI":
       headerRow += "eco2[ppm],tvoc[ppb],resistance[ohm],no2[ppb],no2[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
-      break;               
+      break;          
+    case "model AJ":
+      headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],o3[ppb],o3[V]";
+      break;           
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1430,6 +1460,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AG": ["", "temperature", "humidity", "o3", "o3_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model AH": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "co", "co_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],      
       "model AI": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "no2", "no2_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],            
+      "model AJ": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "latitude", "longitude", "altitude"],            
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1465,6 +1496,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AG": ["", tempUnits, "%", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
       "model AH": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppm", "ohms", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],      
       "model AI": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],      
+      "model AJ": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "deg", "deg", "m"],      
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
 
