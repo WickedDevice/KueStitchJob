@@ -449,6 +449,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[8] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AL') {
+      if (!compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/o3") >= 0) {
     if (model === 'model B') {
@@ -594,6 +612,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AL') {
+      if (!compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
@@ -713,6 +749,11 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[4] = valueOrInvalid(message.pm1p0);
       record[5] = valueOrInvalid(message.pm2p5);
       record[6] = valueOrInvalid(message.pm10p0);
+    }
+    else if (model === 'model AL') {
+      record[7] = valueOrInvalid(message.pm1p0);
+      record[8] = valueOrInvalid(message.pm2p5);
+      record[9] = valueOrInvalid(message.pm10p0);
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
@@ -1152,6 +1193,9 @@ const getEggModelType = (dirname, extantTopics) => {
     case    0b1010001: return 'model AI'; // pm + voc + no2
     case      0b11000: return 'model AJ'; // pm + o3
     case     0b110100: return 'model AK'; // pm + so2 + co2
+    case      0b11100: return 'model AL'; // pm + so2 + o3
+    case       0b1010: return 'model AM'; // co + o3
+    case    0b1001000: return 'model AN'; // voc + o3
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1240,6 +1284,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 11 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3, o3_raw, lat, lng, alt + [pressure]
     case 'model AK': //  pm + co2 + so2
       return 12 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, so2, so2_raw, lat, lng, alt + [pressure]
+    case 'model AL':
+      return 13 + additionalFields; // time, temp, hum, so2, so2_raw, o3, o3_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
 
     default:
       return 6 + additionalFields;
@@ -1395,6 +1441,9 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     case "model AK":
       headerRow += "co2[ppm],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],so2[ppb],so2[V]";
       break;
+    case "model AL":
+      headerRow += "so2[ppb],o3[ppb],so2[V],o3[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1491,6 +1540,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AI": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "no2", "no2_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
       "model AJ": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "latitude", "longitude", "altitude"],
       "model AK": ["", "temperature", "humidity", "co2", "pm1p0", "pm2p5", "pm10p0", "so2", "so2_raw", "latitude", "longitude", "altitude"],
+      "model AL": ["", "temperature", "humidity", "so2", "o3", "so2_raw", "o3_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1528,6 +1578,8 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AI": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],
       "model AJ": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "deg", "deg", "m"],
       "model AK": ["", tempUnits, "%", "ppm", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "deg", "deg", "m"],
+      "model AL": ["", tempUnits, "%", "ppb", "ppb", "V", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],
+
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
 
