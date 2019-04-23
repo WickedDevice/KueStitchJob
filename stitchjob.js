@@ -630,6 +630,42 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AM') {
+      if (!compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-value']);
+        record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+    else if (model === 'model AN') {
+      if (!compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[6] = valueOrInvalid(message['compensated-value']);
+        record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
@@ -913,6 +949,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AM') {
+      if (!compensated && !instantaneous) {
+        record[5] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[5] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[5] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[5] = valueOrInvalid(message['compensated-value']);
+        record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/voc") >= 0) {
     if (model === 'model E') {
@@ -1070,6 +1124,28 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       }
     }
     else if (model === 'model AI')  {
+      if (!compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['converted-co2']);
+        record[4] = valueOrInvalid(message['converted-tvoc']);
+        record[5] = valueOrInvalid(message['converted-resistance']);
+      }
+      else if (compensated && !instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-co2']);
+        record[4] = valueOrInvalid(message['compensated-tvoc']);
+        record[5] = valueOrInvalid(message['compensated-resistance']);
+      }
+      else if (!compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['raw-instant-co2']);
+        record[4] = valueOrInvalid(message['raw-instant-tvoc']);
+        record[5] = valueOrInvalid(message['raw-instant-resistance']);
+      }
+      else if (compensated && instantaneous) {
+        record[3] = valueOrInvalid(message['compensated-instant-co2']);
+        record[4] = valueOrInvalid(message['compensated-instant-tvoc']);
+        record[5] = valueOrInvalid(message['compensated-instant-resistance']);
+      }
+    }
+    else if (model === 'model AN')  {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['converted-co2']);
         record[4] = valueOrInvalid(message['converted-tvoc']);
@@ -1286,6 +1362,10 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 12 + additionalFields; // time, temp, hum, co2, pm1p0, pm2p5, pm10p0, so2, so2_raw, lat, lng, alt + [pressure]
     case 'model AL':
       return 13 + additionalFields; // time, temp, hum, so2, so2_raw, o3, o3_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
+    case 'model AM':
+      return 10 + additionalFields; // time, temp, hum, o3_raw, o3, co_raw, co, lat, lng, alt + [pressure]
+    case 'model AN': // voc + o3
+      return 11 + additionalFields; // time, temp, hum, eco2, voc, res, o3, o3_raw, lat, lng, alt + [pressure]
 
     default:
       return 6 + additionalFields;
@@ -1444,6 +1524,13 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     case "model AL":
       headerRow += "so2[ppb],o3[ppb],so2[V],o3[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
       break;
+    case "model AM":
+      headerRow += "o3[ppb],o3[V],co[ppm],co[V]";
+      break;
+    case "model AN":
+      headerRow += "eco2[ppm],tvoc[ppb],resistance[ohm],o3[ppb],o3[V]";
+      break;
+
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1541,6 +1628,9 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AJ": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "latitude", "longitude", "altitude"],
       "model AK": ["", "temperature", "humidity", "co2", "pm1p0", "pm2p5", "pm10p0", "so2", "so2_raw", "latitude", "longitude", "altitude"],
       "model AL": ["", "temperature", "humidity", "so2", "o3", "so2_raw", "o3_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
+      "model AM": ["", "temperature", "humidity", "o3", "o3_raw", "co", "co_raw", "latitude", "longitude", "altitude"],
+      "model AN": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "o3", "o3_raw", "latitude", "longitude", "altitude"],
+
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1579,6 +1669,8 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AJ": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "deg", "deg", "m"],
       "model AK": ["", tempUnits, "%", "ppm", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "deg", "deg", "m"],
       "model AL": ["", tempUnits, "%", "ppb", "ppb", "V", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],
+      "model AM": ["", tempUnits, "%", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
+      "model AN": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
