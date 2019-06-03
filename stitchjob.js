@@ -825,7 +825,8 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model M', 'model P',
-         'model V', 'model AA', 'model AE', 'model AK'].indexOf(model) >= 0) {
+         'model V', 'model AA', 'model AE', 'model AK',
+         'model AP'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -983,6 +984,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       else if (compensated && instantaneous) {
         record[5] = valueOrInvalid(message['compensated-value']);
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
+    else if (model === 'model AP') {
+      if (!compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
   }
@@ -1313,6 +1332,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case       0b1010: return 'model AM'; // co + o3
     case    0b1001000: return 'model AN'; // voc + o3
     case    0b1000100: return 'model AO'; // voc + so2
+    case     0b100010: return 'model AP'; // co2 + co
 
     default:
       if (modelCode !== 0b0) {
@@ -1410,7 +1430,9 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 11 + additionalFields; // time, temp, hum, eco2, voc, res, o3, o3_raw, lat, lng, alt + [pressure]
     case 'model AO': // voc + so2
       return 11 + additionalFields; // time, temp, hum, eco2, voc, res, so2, so2_raw, lat, lng, alt + [pressure]
-
+    case 'model AP':
+      return 9 + additionalFields; // time, temp, hum, co2, co, co_raw, lat, lng, alt + [pressure]
+    
     default:
       return 6 + additionalFields;
   }
@@ -1577,6 +1599,9 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     case "model AO":
       headerRow += "eco2[ppm],tvoc[ppb],resistance[ohm],so2[ppb],so2[V]";
       break;
+    case "model AP":
+      headerRow += "co2[ppm],co[ppm],co[V]";
+      break;
 
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
@@ -1678,6 +1703,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AM": ["", "temperature", "humidity", "o3", "o3_raw", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model AN": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "o3", "o3_raw", "latitude", "longitude", "altitude"],
       "model AO": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "so2", "so2_raw", "latitude", "longitude", "altitude"],
+      "model AP": ["", "temperature", "humidity", "co2", "co", "co_raw", "latitude", "longitude", "altitude"],
 
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
@@ -1720,6 +1746,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AM": ["", tempUnits, "%", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
       "model AN": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
       "model AO": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
+      "model AP": ["", tempUnits, "%", "ppm", "ppm", "ohms", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
