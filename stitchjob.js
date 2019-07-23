@@ -1673,7 +1673,7 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     headerRow += ",battery[V]";
   }
 
-  headerRow += ",latitude[deg],longitude[deg],altitude[m],aqi,nowcast,heatindex\r\n";
+  headerRow += `,latitude[deg],longitude[deg],altitude[m],aqi,nowcast,heatindex[${temperatureUnits}]\r\n`;
   fs.appendFileSync(filepath, headerRow);
 };
 
