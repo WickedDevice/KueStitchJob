@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
 const jStat = require('jStat').jStat;
+const util = require('./utility');
 
 /*
 function generateHeapDumpAndStats(){
@@ -35,7 +36,7 @@ const getDirectories = (srcpath) => {
     return fs.statSync(path.join(srcpath, file)).isDirectory();
   });
 };
-
+const nonEPASensors = ['co2_aqi', 'pm1p0_aqi', 'voc_aqi'];
 const known_topic_prefixes = [
   "/orgs/wd/aqe/temperature",
   "/orgs/wd/aqe/humidity",
@@ -51,7 +52,10 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/water/temperature",
   "/orgs/wd/aqe/water/conductivity",
   "/orgs/wd/aqe/water/turbidity",
-  "/orgs/wd/aqe/water/ph"
+  "/orgs/wd/aqe/water/ph",
+  "/orgs/wd/aqe/aqi",
+  "/orgs/wd/aqe/nowcast"
+
 ];
 
 const invalid_value_string = "---";
@@ -68,7 +72,7 @@ const valueOrInvalid = (value) => {
   return value;
 };
 
-const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery) => {
+const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C') => {
   const natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if (known_topic_prefixes.indexOf(natural_topic) < 0) {
     if (natural_topic.indexOf("heartbeat") < 0) {
@@ -97,12 +101,15 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   else if (message.altitude) { // the old way
     altitude = +message.altitude;
   }
+  let heatIndex = '---';
+  let epaSensorValues = [];
+  let nonEpaSensorValues = [];
+  let aqi = '---';
+  let nowcast = '---';
 
-
-  // in CSV, GPS are always the last three coordinates, patch them in if we've got them
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 1] = valueOrInvalid(altitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 2] = valueOrInvalid(longitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 3] = valueOrInvalid(latitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(altitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 5] = valueOrInvalid(longitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 6] = valueOrInvalid(latitude);
 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0) {
@@ -119,6 +126,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (compensated && instantaneous) {
       record[1] = valueOrInvalid(message['converted-value']);
     }
+
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
     if (!compensated && !instantaneous) {
@@ -133,7 +141,53 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (compensated && instantaneous) {
       record[2] = valueOrInvalid(message['converted-value']);
     }
+
+
+    if(isNumeric(record[1]) && isNumeric(record[2])) {
+      let heatIndexObj = {};
+      if(currentTemperatureUnits === 'degC') {
+        heatIndexObj  = util.calculateHeatIndexDegC(record[1], record[2],currentTemperatureUnits);
+      } else {
+        heatIndexObj  = util.calculateHeatIndexDegC(record[1], record[2], currentTemperatureUnits);
+      }
+
+      if(heatIndexObj) {
+        heatIndex = heatIndexObj.value;
+      }
+        record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 1] = valueOrInvalid(heatIndex);
+
+   }
+  } else if (message.topic.indexOf("/orgs/wd/aqe/aqi") >= 0) {
+    let aqiSensors = [];
+    if(message.aqi) {
+        aqiSensors = Object.keys(message.aqi); 
+    }
+    aqiSensors.forEach(v => {
+         if(nonEPASensors.includes(v)) {
+           nonEpaSensorValues.push(message.aqi[v]);
+         } else {
+          epaSensorValues.push(message.aqi[v]);
+         }
+    });
+
+    if(epaSensorValues.length && nonEpaSensorValues.length) {
+         aqi = Math.max(...epaSensorValues);
+    } else if(epaSensorValues.length) {
+      aqi = Math.max(...epaSensorValues);
+    } else {
+      aqi = Math.max(...nonEpaSensorValues);
+    }
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 3] = valueOrInvalid(aqi);
+  }else if (message.topic.indexOf("/orgs/wd/aqe/nowcast") >= 0) {
+    let nowcastSensorvalues = [];
+    if(message.nowcast) {
+      nowcastSensorvalues = Object.keys(message.nowcast).map(v => message.nowcast[v]);
+    }
+    nowcast = Math.max(...nowcastSensorvalues);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 2] = valueOrInvalid(nowcast);
+    
   }
+  // in CSV, GPS are always the last three coordinates, patch them in if we've got them
   else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
     if (model === 'model A') {
       if (!compensated && !instantaneous) {
@@ -811,17 +865,17 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
-    let pressureIndex = -4;
+    let pressureIndex = -7;
     if(hasBattery) {
       pressureIndex--;
     }
     record[getRecordLengthByModelType(model, hasPressure, hasBattery) + pressureIndex] = valueOrInvalid(message.pressure);
-    if ((record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 1] === undefined) && !!message.altitude) {
-      record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 1] = valueOrInvalid(message.altitude);
+    if ((record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] === undefined) && !!message.altitude) {
+      record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(message.altitude);
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/battery") >= 0) {
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(message['converted-value']);
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 7] = valueOrInvalid(message['converted-value']);
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model M', 'model P',
@@ -1350,6 +1404,7 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
   if(hasBattery) {
     additionalFields++;
   }
+  additionalFields += 3;
 
   switch (modelType) {
     case 'model A':
@@ -1618,7 +1673,7 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     headerRow += ",battery[V]";
   }
 
-  headerRow += ",latitude[deg],longitude[deg],altitude[m]\r\n";
+  headerRow += ",latitude[deg],longitude[deg],altitude[m],aqi,nowcast,heatindex\r\n";
   fs.appendFileSync(filepath, headerRow);
 };
 
@@ -2026,7 +2081,7 @@ queue.process('stitch', 3, (job, done) => {
                       if (datum.topic.indexOf("temperature") >= 0) {
                         currentTemperatureUnits = datum["converted-units"];
                       }
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, currentTemperatureUnits);
                       // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
