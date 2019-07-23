@@ -5,13 +5,13 @@ var kue = require('kue')
 
 let job = {
   data: {
-    original_serials: ["egg0080425108080130"],
+    original_serials: ["egg00802ebeec080120AH"],
     original_url: "blah",
-    save_path : "/home/wd/dev/KueStitchJob/tmp",
+    save_path : "/home/mitesh/dev/KueStitchJob/tmp",
     user_id: "blah",
     email: "blah",
     utcOffset: -4,
-    compenasted: true,
+    compensated: true,
     instantaneous: false,
     zipfilename: "blah",
     bypassjobs: [],
