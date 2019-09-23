@@ -160,7 +160,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   } else if (message.topic.indexOf("/orgs/wd/aqe/aqi") >= 0) {
     let aqiSensors = [];
     if(message.aqi) {
-        aqiSensors = Object.keys(message.aqi); 
+        aqiSensors = Object.keys(message.aqi);
     }
     aqiSensors.forEach(v => {
          if(nonEPASensors.includes(v)) {
@@ -185,7 +185,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
     nowcast = Math.max(...nowcastSensorvalues);
   record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 2] = valueOrInvalid(nowcast);
-    
+
   }
   // in CSV, GPS are always the last three coordinates, patch them in if we've got them
   else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
@@ -1508,7 +1508,7 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 9 + additionalFields; // time, temp, hum, co2, co, co_raw, lat, lng, alt + [pressure]
     case 'model AQ':
       return 8 + additionalFields; // time, temp, hum, co, co_raw, lat, lng, alt + [pressure]
-    
+
     default:
       return 6 + additionalFields;
   }
@@ -2224,6 +2224,7 @@ const generateNextJob = (job) => {
     })
       .priority('high')
       .attempts(1)
+      .removeOnComplete( true )
       .save();
   }
   else {
@@ -2241,6 +2242,7 @@ const generateNextJob = (job) => {
     })
       .priority('high')
       .attempts(1)
+      .removeOnComplete( true )
       .save();
   }
 };
