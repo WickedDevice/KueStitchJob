@@ -1529,15 +1529,23 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
 const determineTimebase = (dirname, items, uniqueTopics) => {
   let serialNumber = dirname.split("_");
   serialNumber = serialNumber[serialNumber.length - 1];
-  let temperatureTopic = null;
-  if (uniqueTopics.indexOf("/orgs/wd/aqe/temperature") >= 0) {
-    temperatureTopic = "/orgs/wd/aqe/temperature";
-  }
-  else if (uniqueTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0) {
-    temperatureTopic = "/orgs/wd/aqe/temperature/" + serialNumber;
+  let timebaseTopic = null;
+  const possibleTimeBaseTopicPrefixes = [
+    '/orgs/wd/aqe/temperature',
+    '/orgs/wd/aqe/battery'
+  ];
+
+  for(let ii = 0; (ii < possibleTimeBaseTopicPrefixes.length) && !timebaseTopic; ii++) {
+    const topicPrefix = possibleTimeBaseTopicPrefixes[ii];
+    if (uniqueTopics.indexOf(topicPrefix) >= 0) {
+      timebaseTopic = topicPrefix;
+    }
+    else if (uniqueTopics.indexOf(topicPrefix + '/' + serialNumber) >= 0) {
+      timebaseTopic = topicPrefix + '/' + serialNumber;
+    }
   }
 
-  if (!temperatureTopic) {
+  if (!timebaseTopic) {
     return null;
   }
 
@@ -1545,7 +1553,7 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
   let lastTime = null;
 
   items.filter((item) => {
-    return item.topic === temperatureTopic;
+    return item.topic === timebaseTopic;
   }).forEach((item) => {
     if (!lastTime) {
       lastTime = moment(item.timestamp);
