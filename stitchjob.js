@@ -1728,7 +1728,7 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
   }
   headerRow += '\r\n';
 
-  console.log(shouldIncludeTemperature, shouldIncludeHumidity, shouldIncludeAqiEtc, model, headerRow);
+  // console.log(shouldIncludeTemperature, shouldIncludeHumidity, shouldIncludeAqiEtc, model, headerRow);
 
   fs.appendFileSync(filepath, headerRow);
 };
