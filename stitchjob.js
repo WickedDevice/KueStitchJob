@@ -54,7 +54,8 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/water/turbidity",
   "/orgs/wd/aqe/water/ph",
   "/orgs/wd/aqe/aqi",
-  "/orgs/wd/aqe/nowcast"
+  "/orgs/wd/aqe/nowcast",
+  "/orgs/wd/aqe/soilmoisture"
 
 ];
 
@@ -1314,6 +1315,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[6] = valueOrInvalid(message.value);
     record[7] = valueOrInvalid(message['raw-value']);
   }
+  else if (message.topic.indexOf("/orgs/wd/aqe/soilmoisture") >= 0) {
+    record[3] = valueOrInvalid(message['converted-value']);
+  }
 };
 
 const refineModelType = (modelType, data) => {
@@ -1361,7 +1365,8 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasConductivity = extantTopics.indexOf("/orgs/wd/aqe/water/conductivity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/conductivity/" + serialNumber) >= 0;
   const hasPh = extantTopics.indexOf("/orgs/wd/aqe/water/ph") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/ph/" + serialNumber) >= 0;
   const hasTurbidity = extantTopics.indexOf("/orgs/wd/aqe/water/turbidity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/turbidity/" + serialNumber) >= 0;
-  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity].reverse();
+  const hasSoilMoisture = extantTopics.indexOf("/orgs/wd/aqe/soilmoisture") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/soilmoisture/" + serialNumber) >= 0;
+  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, hasSoilMoisture].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
   }, 0);
@@ -1406,6 +1411,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case    0b1000100: return 'model AO'; // voc + so2
     case     0b100010: return 'model AP'; // co2 + co
     case         0b10: return 'model AQ'; // co-only
+    case 0b10000000000: return 'model AR'; // soil moisture only
 
     default:
       if (modelCode !== 0b0) {
@@ -1508,6 +1514,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 9 + additionalFields; // time, temp, hum, co2, co, co_raw, lat, lng, alt + [pressure]
     case 'model AQ':
       return 8 + additionalFields; // time, temp, hum, co, co_raw, lat, lng, alt + [pressure]
+    case 'model AR':
+      return 7 + additionalFields; // time, temp, hum, soil_moisture, lat, lng, alt + [pressure]
 
     default:
       return 6 + additionalFields;
@@ -1678,8 +1686,11 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     case "model AP":
       headerRow += "co2[ppm],co[ppm],co[V]";
       break;
-      case "model AQ":
+    case "model AQ":
       headerRow += "co[ppm],co[V]";
+      break;
+    case "model AR":
+      headerRow += "volumetric_water_content[%]";
       break;
 
     case "model H": // base model
@@ -1784,7 +1795,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AO": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "so2", "so2_raw", "latitude", "longitude", "altitude"],
       "model AP": ["", "temperature", "humidity", "co2", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model AQ": ["", "temperature", "humidity", "co", "co_raw", "latitude", "longitude", "altitude"],
-
+      "model AR": ["", "temperature", "humidity", "soilmoisture", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1828,6 +1839,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AO": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
       "model AP": ["", tempUnits, "%", "ppm", "ppm", "ohms", "deg", "deg", "m"],
       "model AQ": ["", tempUnits, "%", "ppm", "ohms", "deg", "deg", "m"],
+      "model AR": ["", tempUnits, "%", "%", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
