@@ -1999,7 +1999,7 @@ queue.process('stitch', 3, (job, done) => {
     let temperatureUnits = null;
     let hasPressure = false;
     let hasBattery = false;
-    const temperatureItems = []; // for the benefit of determineTimebase
+    const timebaseItems = []; // for the benefit of determineTimebase
     let rowsWritten = 0;
     let totalMessages = 0;
     let messagesProcessed = 0;
@@ -2075,8 +2075,8 @@ queue.process('stitch', 3, (job, done) => {
           totalMessages += items.length;
           items.forEach((item) => {
             uniqueTopics[item.topic] = 1;
-            if (item.topic.indexOf("temperature") >= 0) {
-              temperatureItems.push(item);
+            if ((item.topic.indexOf("temperature") >= 0) || item.topic.indexOf("battery") >= 0) {
+              timebaseItems.push(item);
             }
             if (item.topic.indexOf("pressure") >= 0) {
               hasPressure = true;
@@ -2114,7 +2114,7 @@ queue.process('stitch', 3, (job, done) => {
         console.log(`Egg Serial Number ${dir} is ${modelType} type`);
         job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
-        timeBase = determineTimebase(dir, temperatureItems, uniqueTopics);
+        timeBase = determineTimebase(dir, timebaseItems, uniqueTopics);
         job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
         resolve();
       });
