@@ -1759,21 +1759,25 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
     const shouldIncludeAqiEtc = (modelsWithoutAqiNowcastHeatindex.indexOf(modelType) < 0);
     // for some models remove temperature and humidity
     // temperature and humidity by convention appear in [1] and [2]
+    let removed_fields = 0;
     if (!shouldIncludeHumidity) { // do this first, before temperature, order matters
       r.splice(2, 1); // remove humidity, at position [2]
+      removed_fields++;
     }
     if (!shouldIncludeTemperature) {
       r.splice(1, 1); // remove temperature, at position [1]
+      removed_fields++;
     }
 
     // for some models remove aqi,nowcast,heatindex
     if (!shouldIncludeAqiEtc) {
       r = r.slice(0, -3); // lop off the last three fields
+      removed_fields += 3;
     }
 
     r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
     let num_non_trivial_fields = 0;
-    for (let i = 0; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery); i++) {
+    for (let i = 0; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery) - removed_fields; i++) {
       if (r[i] === undefined) {
         r[i] = invalid_value_string;
       }
