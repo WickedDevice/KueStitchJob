@@ -1722,10 +1722,13 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
   }
 
   headerRow += `,latitude[deg],longitude[deg],altitude[m]`;
-  if(modelsWithoutAqiNowcastHeatindex.indexOf(model) < 0) { // list models that don't have aqi,nowcast,heatindex
+  const shouldIncludeAqiEtc = modelsWithoutAqiNowcastHeatindex.indexOf(model) < 0;
+  if (shouldIncludeAqiEtc) {
     headerRow += `,aqi,nowcast,heatindex[${temperatureUnits}]`;
   }
   headerRow += '\r\n';
+
+  console.log(shouldIncludeTemperature, shouldIncludeHumidity, shouldIncludeAqiEtc, model, headerRow);
 
   fs.appendFileSync(filepath, headerRow);
 };
@@ -1750,24 +1753,24 @@ const getTemperatureUnits = (items) => {
 const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
   let r = record.slice();
 
-  const shouldIncludeTemperature = (modelsWithoutTemperature.indexOf(modelType) < 0);
-  const shouldIncludeHumidity = (modelsWithoutHumidity.indexOf(modelType) < 0);
-  const shouldIncludeAqiEtc = (modelsWithoutAqiNowcastHeatindex.indexOf(modelType) < 0);
-  // for some models remove temperature and humidity
-  // temperature and humidity by convention appear in [1] and [2]
-  if (!shouldIncludeHumidity) { // do this first, before temperature, order matters
-    r.splice(2, 1); // remove humidity, at position [2]
-  }
-  if (!shouldIncludeTemperature) {
-    r.splice(1, 1); // remove temperature, at position [1]
-  }
-
-  // for some models remove aqi,nowcast,heatindex
-  if (!shouldIncludeAqiEtc) {
-    r = r.slice(0, -3); // lop off the last three fields
-  }
-
   if (format === 'csv') {
+    const shouldIncludeTemperature = (modelsWithoutTemperature.indexOf(modelType) < 0);
+    const shouldIncludeHumidity = (modelsWithoutHumidity.indexOf(modelType) < 0);
+    const shouldIncludeAqiEtc = (modelsWithoutAqiNowcastHeatindex.indexOf(modelType) < 0);
+    // for some models remove temperature and humidity
+    // temperature and humidity by convention appear in [1] and [2]
+    if (!shouldIncludeHumidity) { // do this first, before temperature, order matters
+      r.splice(2, 1); // remove humidity, at position [2]
+    }
+    if (!shouldIncludeTemperature) {
+      r.splice(1, 1); // remove temperature, at position [1]
+    }
+
+    // for some models remove aqi,nowcast,heatindex
+    if (!shouldIncludeAqiEtc) {
+      r = r.slice(0, -3); // lop off the last three fields
+    }
+
     r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
     let num_non_trivial_fields = 0;
     for (let i = 0; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery); i++) {
