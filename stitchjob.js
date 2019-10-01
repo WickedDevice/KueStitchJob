@@ -1750,9 +1750,9 @@ const getTemperatureUnits = (items) => {
 const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
   let r = record.slice();
 
-  const shouldIncludeTemperature = (modelsWithoutTemperature.indexOf(modelType) >= 0);
-  const shouldIncludeHumidity = (modelsWithoutHumidity.indexOf(modelType) >= 0);
-  const shouldIncludeAqiEtc = (modelsWithoutAqiNowcastHeatindex.indexOf(modelType) >= 0);
+  const shouldIncludeTemperature = (modelsWithoutTemperature.indexOf(modelType) < 0);
+  const shouldIncludeHumidity = (modelsWithoutHumidity.indexOf(modelType) < 0);
+  const shouldIncludeAqiEtc = (modelsWithoutAqiNowcastHeatindex.indexOf(modelType) < 0);
   // for some models remove temperature and humidity
   // temperature and humidity by convention appear in [1] and [2]
   if (!shouldIncludeHumidity) { // do this first, before temperature, order matters
