@@ -1369,7 +1369,7 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasConductivity = extantTopics.indexOf("/orgs/wd/aqe/water/conductivity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/conductivity/" + serialNumber) >= 0;
   const hasPh = extantTopics.indexOf("/orgs/wd/aqe/water/ph") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/ph/" + serialNumber) >= 0;
   const hasTurbidity = extantTopics.indexOf("/orgs/wd/aqe/water/turbidity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/turbidity/" + serialNumber) >= 0;
-  const hasSoilMoisture = extantTopics.indexOf("/orgs/wd/aqe/soilmoisture") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/soilmoisture/" + serialNumber) >= 0;
+  const hasSoilMoisture = extantTopics.indexOf("/orgs/wd/aqe/soilmoisture") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/soilmoisture/" + serialNumber) >= 0;
   const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, hasSoilMoisture].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
