@@ -31,9 +31,9 @@ function generateHeapDumpAndStats(){
 setInterval(generateHeapDumpAndStats, 30000);
 */
 
-const modelsWithoutAqiNowcastHeatindex = ['Model AR'];
-const modelsWithoutTemperature = ['Model AR'];
-const modelsWithoutHumidity = ['Model AR'];
+const modelsWithoutAqiNowcastHeatindex = ['model AR'];
+const modelsWithoutTemperature = ['model AR'];
+const modelsWithoutHumidity = ['model AR'];
 
 const getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter((file) => {
