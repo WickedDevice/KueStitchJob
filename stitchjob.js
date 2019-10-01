@@ -1377,7 +1377,7 @@ const getEggModelType = (dirname, extantTopics) => {
   // modelCode will be a unique value depending on the combination of bits that are set
   // the bits are in reverse order of the has array so hasNO2 is bit 0...
   // the rule is that 'new' sensor presence variables MUST be added to the end of the 'has' array
-
+  console.log('modelCode = ' + modelCode);
   switch (modelCode) {
     case         0b11: return 'model A';  // no2 + co
     case       0b1100: return 'model B';  // so2 + o3
