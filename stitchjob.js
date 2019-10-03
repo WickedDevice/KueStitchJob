@@ -1321,6 +1321,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/soilmoisture") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
+    record[4] = valueOrInvalid(message['raw-value']);
   }
 };
 
@@ -1519,7 +1520,7 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
     case 'model AQ':
       return 8 + additionalFields; // time, temp, hum, co, co_raw, lat, lng, alt + [pressure]
     case 'model AR':
-      return 7 + additionalFields; // time, temp, hum, soil_moisture, lat, lng, alt + [pressure]
+      return 8 + additionalFields; // time, temp, hum, soil_moisture, soil_moisture_raw, lat, lng, alt + [pressure]
 
     default:
       return 6 + additionalFields;
@@ -1711,7 +1712,7 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
       headerRow += "co[ppm],co[V]";
       break;
     case "model AR":
-      headerRow += "volumetric_water_content[%]";
+      headerRow += "volumetric_water_content[%], vwc_raw[V]";
       break;
 
     case "model H": // base model
@@ -1846,7 +1847,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AO": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "so2", "so2_raw", "latitude", "longitude", "altitude"],
       "model AP": ["", "temperature", "humidity", "co2", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model AQ": ["", "temperature", "humidity", "co", "co_raw", "latitude", "longitude", "altitude"],
-      "model AR": ["", "temperature", "humidity", "soilmoisture", "latitude", "longitude", "altitude"],
+      "model AR": ["", "temperature", "humidity", "soilmoisture", "soilmoisture_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1890,7 +1891,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AO": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
       "model AP": ["", tempUnits, "%", "ppm", "ppm", "ohms", "deg", "deg", "m"],
       "model AQ": ["", tempUnits, "%", "ppm", "ohms", "deg", "deg", "m"],
-      "model AR": ["", tempUnits, "%", "%", "deg", "deg", "m"],
+      "model AR": ["", tempUnits, "%", "%", "V", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
