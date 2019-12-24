@@ -1,4 +1,4 @@
-//jshint esversion: 6
+//jshint esversion: 8
 // require('heapdump');
 
 const promiseDoWhilst = require('promise-do-whilst');
@@ -8,6 +8,7 @@ const path = require('path');
 const moment = require('moment');
 const jStat = require('jStat').jStat;
 const util = require('./utility');
+const db = require('./db');
 
 /*
 function generateHeapDumpAndStats(){
@@ -1973,17 +1974,19 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
   return ""; // if nothing else, still return a blank string
 };
 
-queue.process('stitch', 3, (job, done) => {
+queue.process('stitch', 3, async (job, done) => {
   // the download job is going to need the following parameters
   //    save_path - the full path to where the result should be saved
   //    user_id   - the user id that made the request
   //    email     - the email address that should be notified on zip completed
   //    sequence  - the sequence number within this request chain
 
+
   const skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if (!skipJob) {
     // 1. for each folder in save_path, create an empty csv file with the same name
-    const dir = job.data.serials[0];
+    let dir = job.data.serials[0];
+
     let extension = 'csv';
     if (job.data.stitch_format) {
       switch (job.data.stitch_format) {
@@ -1993,7 +1996,37 @@ queue.process('stitch', 3, (job, done) => {
       }
     }
 
-    fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.${extension}`, 'w'));
+    if (job.data.zipfilename && (extension === 'csv')) {
+      // look up the target user email and look up the requested egg
+      try {
+        const users = await db.findDocuments('Users', { email: job.data.email });
+        const user = users[0];
+
+        const eggs = await db.findDocuments('Eggs', { serial_number: dir });
+        const egg = eggs[0];
+
+        // rename the egg serial number to its alias as appropriate
+        let alias = '';
+        if (user && user.aliases && user.aliases[dir]) {
+          alias = user.aliases[dir];
+        } else if (egg && egg.alias) {
+          alias = egg.alias;
+        }
+
+        if (alias) {
+          alias = alias.replace(/[^\x20-\x7E]+/g, ''); // no non-printable characters allowed
+          ['\\\\','#', '/',':','\\*','\\?','"','<','>','\\|',"-"," ", "'"].forEach(function(c){
+            var regex = new RegExp(c, "g");
+            alias = alias.replace(regex, "_"); // turn illegal characters into '_'
+          });
+          dir = alias;
+        }
+      } catch (e) {
+        console.error(e.message || e, e.stack);
+      }
+    }
+
+    fs.closeSync(fs.openSync(outputFilePath, 'w'));
 
     // 2. for each folder in save_path, analyze file all the "n.json" to infer the type of Egg
     //    model, generate an appropriate header row and append it to the csv file, and
