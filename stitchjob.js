@@ -2078,10 +2078,10 @@ queue.process('stitch', 3, async (job, done) => {
           catch (error) {
 
             if (extension === 'csv') {
-              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+              fs.appendFileSync(outputFilePath, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
             }
             else if (extension === 'json') {
-              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+              fs.appendFileSync(outputFilePath, '[]'); // nothing to see here
             }
 
             stop_working = true;
@@ -2100,10 +2100,10 @@ queue.process('stitch', 3, async (job, done) => {
             sn = sn[sn.length - 1]; // the last part of the dirname
 
             if (extension === 'csv') {
-              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${sn}. Please check the time period you requested is accurate`);
+              fs.appendFileSync(outputFilePath, `No data found for ${sn}. Please check the time period you requested is accurate`);
             }
             else if (extension === 'json') {
-              fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+              fs.appendFileSync(outputFilePath, '[]'); // nothing to see here
             }
 
             stop_working = true;
@@ -2133,10 +2133,10 @@ queue.process('stitch', 3, async (job, done) => {
         }
         else {
           if (extension === 'csv') {
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, `No data found for ${sn}. Please check that the Serial Number is accurate`);
+            fs.appendFileSync(outputFilePath, `No data found for ${sn}. Please check that the Serial Number is accurate`);
           }
           else if (extension === 'json') {
-            fs.appendFileSync(`${job.data.save_path}/${dir}.${extension}`, '[]'); // nothing to see here
+            fs.appendFileSync(outputFilePath, '[]'); // nothing to see here
           }
         }
         resolve();
@@ -2181,7 +2181,7 @@ queue.process('stitch', 3, async (job, done) => {
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
 
           if (extension === 'csv') {
-            appendHeaderRow(modelType, `${job.data.save_path}/${dir}.csv`, temperatureUnits, hasPressure, hasBattery);
+            appendHeaderRow(modelType, outputFilePath, temperatureUnits, hasPressure, hasBattery);
           }
           else if (extension === 'json' && (totalMessages > 0)) {
             fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
@@ -2222,7 +2222,7 @@ queue.process('stitch', 3, async (job, done) => {
                     else {
                       // if the record is non-trivial, add it
                       if (extension === 'csv') {
-                        fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+                        fs.appendFileSync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if (job.data.stitch_format === 'influx') {
@@ -2264,7 +2264,7 @@ queue.process('stitch', 3, async (job, done) => {
           job.log(`Finished processing all JSON files, committing last record`);
           // make sure to commit the last record to file in whatever state it's in
           if (extension === 'csv') {
-            fs.appendFileSync(`${job.data.save_path}/${dir}.csv`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+            fs.appendFileSync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
           }
           else if (job.data.stitch_format === 'influx') {
             if (totalMessages > 0) {
