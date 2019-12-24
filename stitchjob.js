@@ -2026,6 +2026,7 @@ queue.process('stitch', 3, async (job, done) => {
       }
     }
 
+    console.log(`${job.data.save_path}/${dir}.${extension}`);
     fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.${extension}`, 'w'));
 
     // 2. for each folder in save_path, analyze file all the "n.json" to infer the type of Egg
