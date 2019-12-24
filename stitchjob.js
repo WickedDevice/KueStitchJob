@@ -2020,7 +2020,7 @@ queue.process('stitch', 3, async (job, done) => {
             var regex = new RegExp(c, "g");
             alias = alias.replace(regex, "_"); // turn illegal characters into '_'
           });
-          outputFilePath = alias;
+          outputFilePath =  `${job.data.save_path}/${alias}.${extension}`;
         }
       } catch (e) {
         console.error(e.message || e, e.stack);
