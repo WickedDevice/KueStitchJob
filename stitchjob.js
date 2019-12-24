@@ -376,7 +376,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[6] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-    else if (model === 'model AI') {
+    else if (['model AI', 'model AS'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[6] = valueOrInvalid(message['compensated-value']);
         record[7] = valueOrInvalid(message['raw-value']);
@@ -1237,7 +1237,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[5] = valueOrInvalid(message['compensated-instant-resistance']);
       }
     }
-    else if (model === 'model AI')  {
+    else if (['model AI', 'model AS'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['converted-co2']);
         record[4] = valueOrInvalid(message['converted-tvoc']);
@@ -1417,6 +1417,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case     0b100010: return 'model AP'; // co2 + co
     case         0b10: return 'model AQ'; // co-only
     case 0b10000000000: return 'model AR'; // soil moisture only
+    case    0b1000001: return 'model AS'; // voc + no2, a subset of AI
 
     default:
       if (modelCode !== 0b0) {
@@ -1521,6 +1522,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 8 + additionalFields; // time, temp, hum, co, co_raw, lat, lng, alt + [pressure]
     case 'model AR':
       return 8 + additionalFields; // time, temp, hum, soil_moisture, soil_moisture_raw, lat, lng, alt + [pressure]
+    case 'model AS': // voc + co
+      return 11 + additionalFields; // time, temp, hum, eco2, voc, res, no2, no2_raw, lat, lng, alt + [pressure]
 
     default:
       return 6 + additionalFields;
@@ -1714,6 +1717,9 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
     case "model AR":
       headerRow += "volumetric_water_content[%], vwc_raw[V]";
       break;
+    case "model AS":
+      headerRow += "eco2[ppm],tvoc[ppb],resistance[ohm],no2[ppb],no2[V]";
+      break;
 
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
@@ -1848,6 +1854,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AP": ["", "temperature", "humidity", "co2", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model AQ": ["", "temperature", "humidity", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model AR": ["", "temperature", "humidity", "soilmoisture", "soilmoisture_raw", "latitude", "longitude", "altitude"],
+      "model AS": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1892,6 +1899,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AP": ["", tempUnits, "%", "ppm", "ppm", "ohms", "deg", "deg", "m"],
       "model AQ": ["", tempUnits, "%", "ppm", "ohms", "deg", "deg", "m"],
       "model AR": ["", tempUnits, "%", "%", "V", "deg", "deg", "m"],
+      "model AS": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
