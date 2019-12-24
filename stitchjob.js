@@ -1996,6 +1996,7 @@ queue.process('stitch', 3, async (job, done) => {
       }
     }
 
+    let outputFilePath = `${job.data.save_path}/${dir}.${extension}`;
     if (job.data.zipfilename && (extension === 'csv')) {
       // look up the target user email and look up the requested egg
       try {
@@ -2019,15 +2020,14 @@ queue.process('stitch', 3, async (job, done) => {
             var regex = new RegExp(c, "g");
             alias = alias.replace(regex, "_"); // turn illegal characters into '_'
           });
-          dir = alias;
+          outputFilePath = alias;
         }
       } catch (e) {
         console.error(e.message || e, e.stack);
       }
     }
 
-    console.log(`${job.data.save_path}/${dir}.${extension}`);
-    fs.closeSync(fs.openSync(`${job.data.save_path}/${dir}.${extension}`, 'w'));
+    fs.closeSync(fs.openSync(outputFilePath, 'w'));
 
     // 2. for each folder in save_path, analyze file all the "n.json" to infer the type of Egg
     //    model, generate an appropriate header row and append it to the csv file, and
