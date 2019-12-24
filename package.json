@@ -13,6 +13,7 @@
     "jStat": "^1.5.3",
     "kue": "^0.11.5",
     "moment": "^2.16.0",
+    "mongodb": "^2.2.36",
     "promise-do-whilst": "^1.0.1"
   }
 }
