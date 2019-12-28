@@ -10,6 +10,15 @@ const jStat = require('jStat').jStat;
 const util = require('./utility');
 const db = require('./db');
 
+const parse = require('csv-parse');
+const stringify = require('csv-stringify');
+const promisify = require('util').promisify;
+const readFileAsync = promisify(fs.readFile);
+const parseAsync = promisify(parse);
+const stringifyAsync = promisify(stringify);
+const writeFileAsync = promisify(fs.writeFile);
+const appendFileAsync = promisify(fs.appendFile);
+
 /*
 function generateHeapDumpAndStats(){
   console.log("generateHeapDumpAndStats");
@@ -1583,7 +1592,7 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
   return jStat.mean(timeDiffs);
 };
 
-const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBattery) => {
+const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, hasBattery) => {
   if (!temperatureUnits) {
     temperatureUnits = "???";
   }
@@ -1746,7 +1755,7 @@ const appendHeaderRow = (model, filepath, temperatureUnits, hasPressure, hasBatt
 
   // console.log(shouldIncludeTemperature, shouldIncludeHumidity, shouldIncludeAqiEtc, model, headerRow);
 
-  fs.appendFileSync(filepath, headerRow);
+  await appendFileAsync(filepath, headerRow);
 };
 
 const getTemperatureUnits = (items) => {
@@ -1981,7 +1990,7 @@ queue.process('stitch', 3, async (job, done) => {
   //    email     - the email address that should be notified on zip completed
   //    sequence  - the sequence number within this request chain
 
-
+  let isThermote = false;
   const skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if (!skipJob) {
     // 1. for each folder in save_path, create an empty csv file with the same name
@@ -2005,6 +2014,10 @@ queue.process('stitch', 3, async (job, done) => {
 
         const eggs = await db.findDocuments('Eggs', { serial_number: dir });
         const egg = eggs[0];
+
+        if (egg.productLine === 'thermote') {
+          isThermote = true;
+        }
 
         // rename the egg serial number to its alias as appropriate
         let alias = '';
@@ -2063,7 +2076,7 @@ queue.process('stitch', 3, async (job, done) => {
 
     return promiseDoWhilst(() => {
       // do this
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const currentFile = firstPassAllFiles.shift();
         let serialNumber = dir.split("_");
         serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
@@ -2079,10 +2092,10 @@ queue.process('stitch', 3, async (job, done) => {
           catch (error) {
 
             if (extension === 'csv') {
-              fs.appendFileSync(outputFilePath, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
+              await appendFileAsync(outputFilePath, `No data found for ${serialNumber}. Please check that the Serial Number is accurate`);
             }
             else if (extension === 'json') {
-              fs.appendFileSync(outputFilePath, '[]'); // nothing to see here
+              await appendFileAsync(outputFilePath, '[]'); // nothing to see here
             }
 
             stop_working = true;
@@ -2101,10 +2114,10 @@ queue.process('stitch', 3, async (job, done) => {
             sn = sn[sn.length - 1]; // the last part of the dirname
 
             if (extension === 'csv') {
-              fs.appendFileSync(outputFilePath, `No data found for ${sn}. Please check the time period you requested is accurate`);
+              await appendFileAsync(outputFilePath, `No data found for ${sn}. Please check the time period you requested is accurate`);
             }
             else if (extension === 'json') {
-              fs.appendFileSync(outputFilePath, '[]'); // nothing to see here
+              await appendFileAsync(outputFilePath, '[]'); // nothing to see here
             }
 
             stop_working = true;
@@ -2134,10 +2147,10 @@ queue.process('stitch', 3, async (job, done) => {
         }
         else {
           if (extension === 'csv') {
-            fs.appendFileSync(outputFilePath, `No data found for ${sn}. Please check that the Serial Number is accurate`);
+            await appendFileAsync(outputFilePath, `No data found for ${sn}. Please check that the Serial Number is accurate`);
           }
           else if (extension === 'json') {
-            fs.appendFileSync(outputFilePath, '[]'); // nothing to see here
+            await appendFileAsync(outputFilePath, '[]'); // nothing to see here
           }
         }
         resolve();
@@ -2162,14 +2175,14 @@ queue.process('stitch', 3, async (job, done) => {
         job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
         resolve();
       });
-    }).then(() => {
+    }).then(async () => {
       if (stop_working) {
         return;
       }
 
       if (allFiles.length > 0) {
         console.log("Starting main loop for Job");
-        return promiseDoWhilst(() => {
+        return promiseDoWhilst(async () => {
           // do this action...
           const filename = allFiles.shift();
 
@@ -2182,10 +2195,10 @@ queue.process('stitch', 3, async (job, done) => {
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
 
           if (extension === 'csv') {
-            appendHeaderRow(modelType, outputFilePath, temperatureUnits, hasPressure, hasBattery);
+            await appendHeaderRow(modelType, outputFilePath, temperatureUnits, hasPressure, hasBattery);
           }
           else if (extension === 'json' && (totalMessages > 0)) {
-            fs.appendFileSync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
+            await appendFileAsync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
           }
 
           if (data.length > 0) {
@@ -2194,7 +2207,7 @@ queue.process('stitch', 3, async (job, done) => {
               return new Promise((resolve, reject) => {
                 const res = resolve;
                 const rej = reject;
-                setTimeout(() => {
+                setTimeout(async () => {
                   try {
                     const datum = data.shift();
                     // console.log(datum, index, currentRecord, modelType);
@@ -2223,11 +2236,11 @@ queue.process('stitch', 3, async (job, done) => {
                     else {
                       // if the record is non-trivial, add it
                       if (extension === 'csv') {
-                        fs.appendFileSync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+                        await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if (job.data.stitch_format === 'influx') {
-                        fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                        await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
                       }
                       rowsWritten++;
 
@@ -2261,16 +2274,58 @@ queue.process('stitch', 3, async (job, done) => {
         }, () => {
           // ... while this condition is true
           return allFiles.length > 0;
-        }).then(() => {
+        }).then(async () => {
           job.log(`Finished processing all JSON files, committing last record`);
           // make sure to commit the last record to file in whatever state it's in
           if (extension === 'csv') {
-            fs.appendFileSync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+            await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+
+            // as a last step here if the Egg is a thermote, then remove any columns from the CSV file
+            // where there are no non-numeric values present
+            if (isThermote) {
+              try {
+                const csvData = await readFileAsync(outputFilePath, {encoding: 'utf8'});
+                const parsedCsv = await parseAsync(csvData, {columns: true});
+
+                if (Array.isArray(parsedCsv) && (parsedCsv.length > 0)) {
+                  const keys = Object.keys(parsedCsv[0]);
+                  const purelyNonNumericKeys = [];
+                  keys.forEach(k => {
+                    if (k === 'timestamp') {
+                      return;
+                    }
+
+                    const numericRows = parsedCsv.filter(v => isNumeric(v[k]));
+                    if (numericRows.length === 0) {
+                      purelyNonNumericKeys.push(k);
+                    }
+                  });
+
+                  // only keep columns that have at least one numeric value in them
+                  const newCsv = parsedCsv.map(row => {
+                    const ret = {};
+                    keys.forEach(k => {
+                      if (k === 'timestamp') {
+                        ret[k] = row[k];
+                      } else if (purelyNonNumericKeys.indexOf(k) < 0) {
+                        ret[k] = row[k];
+                      }
+                    });
+                    return ret;
+                  });
+
+                  const newCsvStr = await stringifyAsync(newCsv, {header: true});
+                  await writeFileAsync(outputFilePath, newCsvStr, {encoding: 'utf8'});
+                }
+              } catch(e) {
+                console.error(e);
+              }
+            }
           }
           else if (job.data.stitch_format === 'influx') {
             if (totalMessages > 0) {
-              fs.appendFileSync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
-              fs.appendFileSync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
+              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+              await appendFileAsync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
             }
           }
           rowsWritten++;
