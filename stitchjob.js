@@ -2301,7 +2301,9 @@ queue.process('stitch', 3, async (job, done) => {
                   const newCsv = parsedCsv.map(row => {
                     const ret = {};
                     keys.forEach(k => {
-                      if (purelyNonNumericKeys.indexOf(k) < 0) {
+                      if (k === 'timestamp') {
+                        ret[k] = row[k];
+                      } else if (purelyNonNumericKeys.indexOf(k) < 0) {
                         ret[k] = row[k];
                       }
                     });
