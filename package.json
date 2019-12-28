@@ -13,7 +13,7 @@
     "csv-stringify": "^5.3.6",
     "heapdump": "^0.3.9",
     "jStat": "^1.5.3",
-    "kue": "^0.11.5",
+    "kue": "^0.11.6",
     "moment": "^2.16.0",
     "mongodb": "^2.2.36",
     "promise-do-whilst": "^1.0.1"
