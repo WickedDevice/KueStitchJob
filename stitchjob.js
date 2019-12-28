@@ -2291,6 +2291,10 @@ queue.process('stitch', 3, async (job, done) => {
                   const keys = Object.keys(parsedCsv[0]);
                   const purelyNonNumericKeys = [];
                   keys.forEach(k => {
+                    if (k === 'timestamp') {
+                      return;
+                    }
+
                     const numericRows = parsedCsv.filter(v => isNumeric(v[k]));
                     if (numericRows.length === 0) {
                       purelyNonNumericKeys.push(k);
