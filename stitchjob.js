@@ -69,8 +69,9 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/water/ph",
   "/orgs/wd/aqe/aqi",
   "/orgs/wd/aqe/nowcast",
-  "/orgs/wd/aqe/soilmoisture"
-
+  "/orgs/wd/aqe/soilmoisture",
+  "/orgs/wd/aqe/fuelgauge",
+  "/orgs/wd/aqe/threshold"
 ];
 
 const invalid_value_string = "---";
@@ -1333,6 +1334,14 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
   }
+  else if (message.topic.indexOf("/orgs/wd/aqe/fuelgauge") >= 0) {
+    record[3] = valueOrInvalid(message['converted-value']);
+    record[4] = valueOrInvalid(message['raw-value']);
+  }
+  else if (message.topic.indexOf("/orgs/wd/aqe/threshold") >= 0) {
+    record[3] = valueOrInvalid(message['converted-value']);
+    record[4] = valueOrInvalid(message['raw-value']);
+  }
 };
 
 const refineModelType = (modelType, data) => {
@@ -1381,7 +1390,9 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasPh = extantTopics.indexOf("/orgs/wd/aqe/water/ph") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/ph/" + serialNumber) >= 0;
   const hasTurbidity = extantTopics.indexOf("/orgs/wd/aqe/water/turbidity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/turbidity/" + serialNumber) >= 0;
   const hasSoilMoisture = extantTopics.indexOf("/orgs/wd/aqe/soilmoisture") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/soilmoisture/" + serialNumber) >= 0;
-  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, hasSoilMoisture].reverse();
+  const hasFuelgauge = extantTopics.indexOf("/orgs/wd/aqe/fuelgague") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/fuelgauge/" + serialNumber) >= 0;
+  const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
+  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, hasSoilMoisture, hasFuelgauge, hasThreshold].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
   }, 0);
@@ -1426,7 +1437,10 @@ const getEggModelType = (dirname, extantTopics) => {
     case    0b1000100: return 'model AO'; // voc + so2
     case     0b100010: return 'model AP'; // co2 + co
     case         0b10: return 'model AQ'; // co-only
-    case 0b10000000000: return 'model AR'; // soil moisture only
+    case   0b10000000000: return 'model AR'; // soil moisture only
+    case  0b100000000000: return 'model AT'; // fuel gauge only
+    case 0b1000000000000: return 'model AU'; // threshold only
+
     case    0b1000001: return 'model AS'; // voc + no2, a subset of AI
 
     default:
@@ -1534,7 +1548,10 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 8 + additionalFields; // time, temp, hum, soil_moisture, soil_moisture_raw, lat, lng, alt + [pressure]
     case 'model AS': // voc + co
       return 11 + additionalFields; // time, temp, hum, eco2, voc, res, no2, no2_raw, lat, lng, alt + [pressure]
-
+    case 'model AT':
+      return 8 + additionalFields; // time, temp, hum, fuelguage, fuelguage_raw, lat, lng, alt + [pressure]
+    case 'model AU':
+      return 8 + additionalFields; // time, temp, hum, threshold, threshold_raw, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1865,6 +1882,8 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AQ": ["", "temperature", "humidity", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model AR": ["", "temperature", "humidity", "soilmoisture", "soilmoisture_raw", "latitude", "longitude", "altitude"],
       "model AS": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
+      "model AT": ["", "temperature", "humidity", "fuelgauge", "fuelgauge_raw", "latitude", "longitude", "altitude"],
+      "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1910,6 +1929,8 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AQ": ["", tempUnits, "%", "ppm", "ohms", "deg", "deg", "m"],
       "model AR": ["", tempUnits, "%", "%", "V", "deg", "deg", "m"],
       "model AS": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
+      "model AT": ["", tempUnits, "%", "%", "V", "deg", "deg", "m"],
+      "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
