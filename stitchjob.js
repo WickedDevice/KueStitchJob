@@ -41,9 +41,9 @@ function generateHeapDumpAndStats(){
 setInterval(generateHeapDumpAndStats, 30000);
 */
 
-const modelsWithoutAqiNowcastHeatindex = ['model AR'];
-const modelsWithoutTemperature = ['model AR'];
-const modelsWithoutHumidity = ['model AR'];
+const modelsWithoutAqiNowcastHeatindex = ['model AR', 'model AT', 'model AU', 'model AV'];
+const modelsWithoutTemperature = ['model AR', 'model AT', 'model AU', 'model AV'];
+const modelsWithoutHumidity = ['model AR', 'model AT', 'model AU', 'model AV'];
 
 const getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter((file) => {
@@ -1392,6 +1392,8 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasSoilMoisture = extantTopics.indexOf("/orgs/wd/aqe/soilmoisture") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/soilmoisture/" + serialNumber) >= 0;
   const hasFuelgauge = extantTopics.indexOf("/orgs/wd/aqe/fuelgague") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/fuelgauge/" + serialNumber) >= 0;
   const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
+  const hasPressure = extantTopics.indexOf("/orgs/wd/aqe/pressure") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/pressure/" + serialNumber) >= 0;
+  const hasTemperature = extantTopics.indexOf("/orgs/wd/aqe/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0;
   const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, hasSoilMoisture, hasFuelgauge, hasThreshold].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
@@ -1447,6 +1449,11 @@ const getEggModelType = (dirname, extantTopics) => {
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
       }
+
+      if (!hasTemperature && hasPressure) {
+        return 'model AV'; // this is the hydrostatic pressures sensor
+      }
+
       return 'model H'; // base model
   }
 };
@@ -1552,6 +1559,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 8 + additionalFields; // time, temp, hum, fuelguage, fuelguage_raw, lat, lng, alt + [pressure]
     case 'model AU':
       return 8 + additionalFields; // time, temp, hum, threshold, threshold_raw, lat, lng, alt + [pressure]
+    case 'model AV':
+      return 6 + additionalFields + 1; // time, temp, hum, lat, lng, alt + [pressure] + [pressure_raw]
     default:
       return 6 + additionalFields;
   }
@@ -1747,7 +1756,12 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model AS":
       headerRow += "eco2[ppm],tvoc[ppb],resistance[ohm],no2[ppb],no2[V]";
       break;
-
+    case "model AT":
+      headerRow += "fuel_gauge[%], fuel_gauge_raw[V]";
+      break;
+    case "model AU":
+      headerRow += "threshold[n/a], threshold_raw[V]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1758,6 +1772,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
 
   if (hasPressure) {
     headerRow += ",pressure[Pa]";
+    if (model === 'model AV') { // hydrostatic pressure sensor
+      headerRow += ",pressure_raw[mA]";
+    }
   }
   if (hasBattery) {
     headerRow += ",battery[V]";
@@ -1884,6 +1901,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AS": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model AT": ["", "temperature", "humidity", "fuelgauge", "fuelgauge_raw", "latitude", "longitude", "altitude"],
       "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
+      "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1931,6 +1949,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AS": ["", tempUnits, "%", "ppm", "ppb", "ohms", "ppb", "ohms", "deg", "deg", "m"],
       "model AT": ["", tempUnits, "%", "%", "V", "deg", "deg", "m"],
       "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
+      "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
@@ -1940,10 +1959,16 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       // if we have pressure, add it in at the expected record offset
       Object.keys(modelInfluxFieldsMap).forEach((key) => {
         modelInfluxFieldsMap[key].splice(modelInfluxFieldsMap[key].length - 3, 0, "pressure");
+        if (key === 'model AV') {
+          modelInfluxFieldsMap[key].splice(modelInfluxFieldsMap[key].length - 3, 0, "pressure_raw");
+        }
       });
 
       Object.keys(modelInfluxTagsMap).forEach((key) => {
         modelInfluxTagsMap[key].splice(modelInfluxTagsMap[key].length - 3, 0, "Pa");
+        if (key === 'model AV') {
+          modelInfluxFieldsMap[key].splice(modelInfluxFieldsMap[key].length - 3, 0, "mA");
+        }
       });
     }
 
