@@ -754,6 +754,24 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AW') {
+      if (!compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if (compensated && !instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-value']);
+      }
+      else if (!compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+      else if (compensated && instantaneous) {
+        record[4] = valueOrInvalid(message['compensated-value']);
+        record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      }
+    }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
@@ -896,7 +914,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
-         'model AP'].indexOf(model) >= 0) {
+         'model AP', 'model AW'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -1440,10 +1458,12 @@ const getEggModelType = (dirname, extantTopics) => {
     case     0b100010: return 'model AP'; // co2 + co
     case         0b10: return 'model AQ'; // co-only
     case   0b10000000000: return 'model AR'; // soil moisture only
+    case       0b1000001: return 'model AS'; // voc + no2, a subset of AI
     case  0b100000000000: return 'model AT'; // fuel gauge only
     case 0b1000000000000: return 'model AU'; // threshold only
+    // why is there no model AV? ... because it's very special (pressure only, see below) gaugemote and hydrostaticmote?
+    case     0b101000: return 'model AW'; // co2 + o3
 
-    case    0b1000001: return 'model AS'; // voc + no2, a subset of AI
 
     default:
       if (modelCode !== 0b0) {
@@ -1561,6 +1581,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 8 + additionalFields; // time, temp, hum, threshold, threshold_raw, lat, lng, alt + [pressure]
     case 'model AV':
       return 6 + additionalFields + 1; // time, temp, hum, lat, lng, alt + [pressure] + [pressure_raw]
+    case 'model AW': // co2 + o3
+      return 9 + additionalFields; // time, temp, hum, co2, o3, o3_raw, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1762,6 +1784,10 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model AU":
       headerRow += "threshold[n/a], threshold_raw[V]";
       break;
+    // why no case AV? because it's pressure only and that's handled below
+    case "model AW":
+      headerRow += "co2[ppm],o3[ppb],o3[V]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -1902,6 +1928,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AT": ["", "temperature", "humidity", "fuelgauge", "fuelgauge_raw", "latitude", "longitude", "altitude"],
       "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
       "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
+      "model AW": ["", "temperature", "humidity", "co2", "o3", "o3_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -1950,6 +1977,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AT": ["", tempUnits, "%", "%", "V", "deg", "deg", "m"],
       "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
       "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
+      "model AW": ["", tempUnits, "%", "ppm", "ppb", "V", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
