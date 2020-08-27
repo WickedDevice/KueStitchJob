@@ -110,7 +110,7 @@ const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
   }
 };
 
-const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C') => {
+const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C', job = {}) => {
   const natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if (known_topic_prefixes.indexOf(natural_topic) < 0) {
     if (natural_topic.indexOf("heartbeat") < 0) {
@@ -2330,7 +2330,7 @@ queue.process('stitch', 3, async (job, done) => {
                       if (datum.topic.indexOf("temperature") >= 0) {
                         currentTemperatureUnits = datum["converted-units"];
                       }
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, currentTemperatureUnits);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, currentTemperatureUnits, job);
                       // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
