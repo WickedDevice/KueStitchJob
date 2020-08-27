@@ -88,13 +88,13 @@ const valueOrInvalid = (value) => {
   return value;
 };
 
-const unitConvertTemperatureValueOrInvalid = (value, units) => {
+const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
   let v = valueOrInvalid(value);
   if (v === invalid_value_string) {
     return v;
   } else {
     v = +v;
-    const toUnit = job.data.temperatureUnits.replace(/[^fcFC]/g, '').toUpperCase();
+    const toUnit = targetUnits.replace(/[^fcFC]/g, '').toUpperCase();
     const fromUnit = units.replace(/[^fcFC]/g, '').toUpperCase();
     if (toUnit === fromUnit) {
       return v;
@@ -153,16 +153,16 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   if (message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0) {
     record[0] = message.timestamp;
     if (!compensated && !instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units'], job.data.temperatureUnits);
     }
     else if (compensated && !instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], job.data.temperatureUnits);
     }
     else if (!compensated && instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units'], job.data.temperatureUnits);
     }
     else if (compensated && instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], job.data.temperatureUnits);
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
