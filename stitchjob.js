@@ -88,7 +88,29 @@ const valueOrInvalid = (value) => {
   return value;
 };
 
-const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C') => {
+const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
+  let v = valueOrInvalid(value);
+  if (v === invalid_value_string) {
+    return v;
+  } else {
+    v = +v;
+    const toUnit = targetUnits.replace(/[^fcFC]/g, '').toUpperCase();
+    const fromUnit = units.replace(/[^fcFC]/g, '').toUpperCase();
+    if (toUnit === fromUnit) {
+      return v;
+    } else {
+      if (fromUnit === 'C' && toUnit === 'F') {
+        return v * 9.0 / 5.0 + 32.0; // convert v in C to F
+      } else if (fromUnit === 'F' && toUnit === 'C') {
+        return (v - 32) * 5.0 / 9.0; // convert v in F to C
+      } else {
+        return v; // don't know how to convert that
+      }
+    }
+  }
+};
+
+const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C', job = {}) => {
   const natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if (known_topic_prefixes.indexOf(natural_topic) < 0) {
     if (natural_topic.indexOf("heartbeat") < 0) {
@@ -130,19 +152,19 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0) {
     record[0] = message.timestamp;
+    const targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
     if (!compensated && !instantaneous) {
-      record[1] = valueOrInvalid(message['raw-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units'], targetUnits);
     }
     else if (compensated && !instantaneous) {
-      record[1] = valueOrInvalid(message['converted-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], targetUnits);
     }
     else if (!compensated && instantaneous) {
-      record[1] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units'], targetUnits);
     }
     else if (compensated && instantaneous) {
-      record[1] = valueOrInvalid(message['converted-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], targetUnits);
     }
-
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
     if (!compensated && !instantaneous) {
@@ -2064,6 +2086,8 @@ queue.process('stitch', 15, async (job, done) => {
   //    email     - the email address that should be notified on zip completed
   //    sequence  - the sequence number within this request chain
 
+  job.data.temperatureUnits = null;
+
   let isThermote = false;
   const skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if (!skipJob) {
@@ -2085,6 +2109,13 @@ queue.process('stitch', 15, async (job, done) => {
       try {
         const users = await db.findDocuments('Users', { email: job.data.email });
         const user = users[0];
+        if (user) {
+          if (user.displayMetric === true) {
+            job.data.temperatureUnits = 'degC';
+          } else if (user.displayMetric === false) {
+            job.data.temperatureUnits = 'degF';
+          }
+        }
 
         const eggs = await db.findDocuments('Eggs', { serial_number: dir });
         const egg = eggs[0];
@@ -2127,7 +2158,6 @@ queue.process('stitch', 15, async (job, done) => {
     //// **********
     let uniqueTopics = {};
     let modelType = null;
-    let temperatureUnits = null;
     let hasPressure = false;
     let hasBattery = false;
     const timebaseItems = []; // for the benefit of determineTimebase
@@ -2216,7 +2246,7 @@ queue.process('stitch', 15, async (job, done) => {
               hasBattery = true;
             }
             uniqueTopics[item.topic] = 1;
-            temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
+            job.data.temperatureUnits = job.data.temperatureUnits || getTemperatureUnits([item]);
           });
         }
         else {
@@ -2269,7 +2299,7 @@ queue.process('stitch', 15, async (job, done) => {
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
 
           if (extension === 'csv') {
-            await appendHeaderRow(modelType, outputFilePath, temperatureUnits, hasPressure, hasBattery);
+            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery);
           }
           else if (extension === 'json' && (totalMessages > 0)) {
             await appendFileAsync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
@@ -2301,7 +2331,7 @@ queue.process('stitch', 15, async (job, done) => {
                       if (datum.topic.indexOf("temperature") >= 0) {
                         currentTemperatureUnits = datum["converted-units"];
                       }
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, currentTemperatureUnits);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, currentTemperatureUnits, job);
                       // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
@@ -2320,7 +2350,7 @@ queue.process('stitch', 15, async (job, done) => {
 
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, 'C', job);
                       // console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
@@ -2398,7 +2428,7 @@ queue.process('stitch', 15, async (job, done) => {
           }
           else if (job.data.stitch_format === 'influx') {
             if (totalMessages > 0) {
-              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, job.data.temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
               await appendFileAsync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
             }
           }
