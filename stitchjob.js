@@ -88,6 +88,28 @@ const valueOrInvalid = (value) => {
   return value;
 };
 
+const unitConvertTemperatureValueOrInvalid = (value, units) => {
+  let v = valueOrInvalid(value);
+  if (v === invalid_value_string) {
+    return v;
+  } else {
+    v = +v;
+    const toUnit = temperatureUnits.replace(/[^fcFC]/g, '').toUpperCase();
+    const fromUnit = units.replace(/[^fcFC]/g, '').toUpperCase();
+    if (toUnit === fromUnit) {
+      return v;
+    } else {
+      if (fromUnit === 'C' && toUnit === 'F') {
+        return v * 9.0 / 5.0 + 32.0; // convert v in C to F
+      } else if (fromUnit === 'F' && toUnit === 'C') {
+        return (v - 32) * 5.0 / 9.0; // convert v in F to C
+      } else {
+        return v; // don't know how to convert that
+      }
+    }
+  }
+};
+
 const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C') => {
   const natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if (known_topic_prefixes.indexOf(natural_topic) < 0) {
@@ -131,18 +153,17 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   if (message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0) {
     record[0] = message.timestamp;
     if (!compensated && !instantaneous) {
-      record[1] = valueOrInvalid(message['raw-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units']);
     }
     else if (compensated && !instantaneous) {
-      record[1] = valueOrInvalid(message['converted-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units']);
     }
     else if (!compensated && instantaneous) {
-      record[1] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units']);
     }
     else if (compensated && instantaneous) {
-      record[1] = valueOrInvalid(message['converted-value']);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units']);
     }
-
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
     if (!compensated && !instantaneous) {
@@ -2079,12 +2100,20 @@ queue.process('stitch', 3, async (job, done) => {
       }
     }
 
+    let temperatureUnits = null;
     let outputFilePath = `${job.data.save_path}/${dir}.${extension}`;
     if (job.data.zipfilename && (extension === 'csv')) {
       // look up the target user email and look up the requested egg
       try {
         const users = await db.findDocuments('Users', { email: job.data.email });
         const user = users[0];
+        if (user) {
+          if (user.displayMetric === true) {
+            temperatureUnits = 'degC';
+          } else if (user.displayMetric === false) {
+            temperatureUnits = 'degF';
+          }
+        }
 
         const eggs = await db.findDocuments('Eggs', { serial_number: dir });
         const egg = eggs[0];
@@ -2127,7 +2156,6 @@ queue.process('stitch', 3, async (job, done) => {
     //// **********
     let uniqueTopics = {};
     let modelType = null;
-    let temperatureUnits = null;
     let hasPressure = false;
     let hasBattery = false;
     const timebaseItems = []; // for the benefit of determineTimebase
