@@ -2057,7 +2057,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
   return ""; // if nothing else, still return a blank string
 };
 
-queue.process('stitch', 3, async (job, done) => {
+queue.process('stitch', 15, async (job, done) => {
   // the download job is going to need the following parameters
   //    save_path - the full path to where the result should be saved
   //    user_id   - the user id that made the request
