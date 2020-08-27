@@ -94,7 +94,7 @@ const unitConvertTemperatureValueOrInvalid = (value, units) => {
     return v;
   } else {
     v = +v;
-    const toUnit = temperatureUnits.replace(/[^fcFC]/g, '').toUpperCase();
+    const toUnit = job.data.temperatureUnits.replace(/[^fcFC]/g, '').toUpperCase();
     const fromUnit = units.replace(/[^fcFC]/g, '').toUpperCase();
     if (toUnit === fromUnit) {
       return v;
@@ -2085,6 +2085,8 @@ queue.process('stitch', 3, async (job, done) => {
   //    email     - the email address that should be notified on zip completed
   //    sequence  - the sequence number within this request chain
 
+  job.data.temperatureUnits = null;
+
   let isThermote = false;
   const skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if (!skipJob) {
@@ -2100,7 +2102,6 @@ queue.process('stitch', 3, async (job, done) => {
       }
     }
 
-    let temperatureUnits = null;
     let outputFilePath = `${job.data.save_path}/${dir}.${extension}`;
     if (job.data.zipfilename && (extension === 'csv')) {
       // look up the target user email and look up the requested egg
@@ -2109,9 +2110,9 @@ queue.process('stitch', 3, async (job, done) => {
         const user = users[0];
         if (user) {
           if (user.displayMetric === true) {
-            temperatureUnits = 'degC';
+            job.data.temperatureUnits = 'degC';
           } else if (user.displayMetric === false) {
-            temperatureUnits = 'degF';
+            job.data.temperatureUnits = 'degF';
           }
         }
 
@@ -2244,7 +2245,7 @@ queue.process('stitch', 3, async (job, done) => {
               hasBattery = true;
             }
             uniqueTopics[item.topic] = 1;
-            temperatureUnits = temperatureUnits || getTemperatureUnits([item]);
+            job.data.temperatureUnits = job.data.temperatureUnits || getTemperatureUnits([item]);
           });
         }
         else {
@@ -2297,7 +2298,7 @@ queue.process('stitch', 3, async (job, done) => {
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
 
           if (extension === 'csv') {
-            await appendHeaderRow(modelType, outputFilePath, temperatureUnits, hasPressure, hasBattery);
+            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery);
           }
           else if (extension === 'json' && (totalMessages > 0)) {
             await appendFileAsync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
@@ -2426,7 +2427,7 @@ queue.process('stitch', 3, async (job, done) => {
           }
           else if (job.data.stitch_format === 'influx') {
             if (totalMessages > 0) {
-              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, job.data.temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
               await appendFileAsync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
             }
           }
