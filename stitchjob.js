@@ -2350,7 +2350,7 @@ queue.process('stitch', 3, async (job, done) => {
 
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, 'C', job);
                       // console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
