@@ -152,17 +152,18 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0) {
     record[0] = message.timestamp;
+    const targetUnits = job ? job.data.temperatureUnits : 'degC';
     if (!compensated && !instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units'], job.data.temperatureUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units'], targetUnits);
     }
     else if (compensated && !instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], job.data.temperatureUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], targetUnits);
     }
     else if (!compensated && instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units'], job.data.temperatureUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units'], targetUnits);
     }
     else if (compensated && instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], job.data.temperatureUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], targetUnits);
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
