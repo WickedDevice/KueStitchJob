@@ -53,6 +53,7 @@ const getDirectories = (srcpath) => {
 const nonEPASensors = ['co2_aqi', 'pm1p0_aqi', 'voc_aqi'];
 const known_topic_prefixes = [
   "/orgs/wd/aqe/temperature",
+  "/orgs/lgeo/temperature",
   "/orgs/wd/aqe/humidity",
   "/orgs/wd/aqe/no2",
   "/orgs/wd/aqe/co",
@@ -71,7 +72,8 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/nowcast",
   "/orgs/wd/aqe/soilmoisture",
   "/orgs/wd/aqe/fuelgauge",
-  "/orgs/wd/aqe/threshold"
+  "/orgs/wd/aqe/threshold",
+  "/orgs/lgeo/magnetic_field",
 ];
 
 const invalid_value_string = "---";
@@ -150,20 +152,20 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 6] = valueOrInvalid(latitude);
 
   // console.log("Model is: ", model);
-  if (message.topic.indexOf("/orgs/wd/aqe/temperature") >= 0) {
+  if (message.topic.indexOf("/temperature") >= 0) {
     record[0] = message.timestamp;
     const targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
     if (!compensated && !instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'], message['raw-units'], targetUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'] || message.value, message['raw-units'], targetUnits);
     }
     else if (compensated && !instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], targetUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'] || message.value, message['converted-units'], targetUnits);
     }
     else if (!compensated && instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'], message['raw-units'], targetUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['raw-instant-value'] || message['raw-value'] || message.value, message['raw-units'], targetUnits);
     }
     else if (compensated && instantaneous) {
-      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'], message['converted-units'], targetUnits);
+      record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'] || message.value, message['converted-units'], targetUnits);
     }
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
@@ -216,7 +218,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       aqi = Math.max(...nonEpaSensorValues);
     }
     record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 3] = valueOrInvalid(aqi);
-  }else if (message.topic.indexOf("/orgs/wd/aqe/nowcast") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/nowcast") >= 0) {
     let nowcastSensorvalues = [];
     if(message.nowcast) {
       nowcastSensorvalues = Object.keys(message.nowcast).map(v => message.nowcast[v]);
@@ -1355,9 +1357,6 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       }
     }
   }
-  else if (message.topic.indexOf("/orgs/wd/aqe/water/temperature") >= 0) {
-    record[1] = valueOrInvalid(message.value);
-  }
   else if (message.topic.indexOf("/orgs/wd/aqe/water/conductivity") >= 0) {
     record[2] = valueOrInvalid(message.value);
     record[3] = valueOrInvalid(message['raw-value']);
@@ -1381,6 +1380,14 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   else if (message.topic.indexOf("/orgs/wd/aqe/threshold") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
+  } 
+  else if (message.topic.indexOf('/orgs/lgeo/magnetic_field') >= 0) {
+    for (let ii = 0; ii < 3; ii++) {
+      let cValue = Array.isArray(message['converted-value']) ? message['converted-value'] : [];
+      let rValue = Array.isArray(message['raw-value']) ? message['raw-value'] : [];
+      record[2 + ii] = valueOrInvalid(cValue[ii]);
+      record[5 + ii] = valueOrInvalid(rValue[iii]);
+    }    
   }
 };
 
@@ -1434,7 +1441,11 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
   const hasPressure = extantTopics.indexOf("/orgs/wd/aqe/pressure") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/pressure/" + serialNumber) >= 0;
   const hasTemperature = extantTopics.indexOf("/orgs/wd/aqe/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0;
-  const has = [hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, hasSoilMoisture, hasFuelgauge, hasThreshold].reverse();
+  const hasMagneticField = extantTopics.indexOf("/orgs/lgeo/temperature") >= 0 || extantTopics.indexOf("/orgs/lgeo/temperature/" + serialNumber) >= 0;
+  const has = [
+    hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, 
+    hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField
+  ].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
   }, 0);
@@ -1485,6 +1496,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b1000000000000: return 'model AU'; // threshold only
     // why is there no model AV? ... because it's very special (pressure only, see below) gaugemote and hydrostaticmote?
     case     0b101000: return 'model AW'; // co2 + o3
+    case 0b10000000000000: return 'model LA'; // leeman geophysical magnetic field
 
 
     default:
@@ -1951,6 +1963,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
       "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
       "model AW": ["", "temperature", "humidity", "co2", "o3", "o3_raw", "latitude", "longitude", "altitude"],
+      "model LA": ["", "temperature", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2000,6 +2013,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
       "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
       "model AW": ["", tempUnits, "%", "ppm", "ppb", "V", "deg", "deg", "m"],
+      "model LA": ["", tempUnits, 'nT', 'nT', 'nT', 'V', 'V', 'V'],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
