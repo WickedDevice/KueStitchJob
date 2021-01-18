@@ -1381,13 +1381,28 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
   } 
-  else if (message.topic.indexOf('/orgs/lgeo/magnetic_field') >= 0) {
-    for (let ii = 0; ii < 3; ii++) {
+  else if (message.topic.indexOf('/orgs/lgeo/magnetic_field') >= 0) {    
+    let maxExpectedComponents = 3;
+    let componentStartIdx = 5;
+    for (let ii = 0; ii < maxExpectedComponents; ii++) {
       let cValue = Array.isArray(message['converted-value']) ? message['converted-value'] : [];
-      let rValue = Array.isArray(message['raw-value']) ? message['raw-value'] : [];
-      record[2 + ii] = valueOrInvalid(cValue[ii]);
-      record[5 + ii] = valueOrInvalid(rValue[iii]);
-    }    
+      let rValue = Array.isArray(message['raw-value']) ? message['raw-value'] : [];      
+      record[componentStartIdx + ii] = valueOrInvalid(cValue[ii]);
+      record[componentStartIdx + maxExpectedComponents + ii] = valueOrInvalid(rValue[ii]);
+    }
+
+    let firstInvalidIndex = record
+      .slice(componentStartIdx, componentStartIdx + maxExpectedComponents)
+      .findIndex(v => !isNumeric(v));
+
+    let numValidComponents = firstInvalidIndex < 0 ? maxExpectedComponents : firstInvalidIndex;
+    const validComponents = record.slice(componentStartIdx, componentStartIdx + numValidComponents);
+    let magnitude = Math.sqrt(validComponents.reduce((t, v) => t + v*v, 0));
+    let azimuth = numValidComponents < 2 ? '---' : Math.atan2(validComponents[1], validComponents[0]);
+    let inclination =  numValidComponents < 3 ? '---' : Math.atan2(Math.sqrt(validComponents[0]**2 + validComponents[1]**2), validComponents[2]);
+    record[componentStartIdx - 3] = magnitude;
+    record[componentStartIdx - 2] = azimuth;
+    record[componentStartIdx - 1] = inclination;
   }
 };
 
@@ -1963,7 +1978,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
       "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
       "model AW": ["", "temperature", "humidity", "co2", "o3", "o3_raw", "latitude", "longitude", "altitude"],
-      "model LA": ["", "temperature", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw"],
+      "model LA": ["", "temperature", "", "", "", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2013,7 +2028,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
       "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
       "model AW": ["", tempUnits, "%", "ppm", "ppb", "V", "deg", "deg", "m"],
-      "model LA": ["", tempUnits, 'nT', 'nT', 'nT', 'V', 'V', 'V'],
+      "model LA": ["", tempUnits, "", "", "", 'nT', 'nT', 'nT', 'V', 'V', 'V'],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
