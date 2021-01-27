@@ -3,6 +3,10 @@
 
 const promiseDoWhilst = require('promise-do-whilst');
 const kue = require('kue'), queue = kue.createQueue();
+
+const concurrency = 15;
+queue.setMaxListeners(queue.getMaxListeners() + concurrency);
+
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
@@ -2120,7 +2124,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
   return ""; // if nothing else, still return a blank string
 };
 
-queue.process('stitch', 15, async (job, done) => {
+queue.process('stitch', concurrency, async (job, done) => {
   // the download job is going to need the following parameters
   //    save_path - the full path to where the result should be saved
   //    user_id   - the user id that made the request
