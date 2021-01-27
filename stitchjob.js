@@ -167,7 +167,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       message['raw-instant-value'] = `${message['raw-instant-value']}`;
     }
 
-    if (!compensated && !instantaneous) {)
+    if (!compensated && !instantaneous) {
       record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'] || message.value, message['raw-units'], targetUnits);
     }
     else if (compensated && !instantaneous) {
