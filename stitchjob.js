@@ -87,7 +87,7 @@ const valueOrInvalid = (value) => {
     return invalid_value_string;
   }
 
-  return value;
+  return +value;
 };
 
 const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
@@ -155,7 +155,19 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   if (message.topic.indexOf("/temperature") >= 0) {
     record[0] = message.timestamp;
     const targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
-    if (!compensated && !instantaneous) {
+
+    // the following string conversions ensure that 0 does not get treated as false
+    if (isNumeric(message['raw-value'])) {
+      message['raw-value'] = `${message['raw-value']}`;
+    }
+    if (isNumeric(message['converted-value'])) {
+      message['converted-value'] = `${message['converted-value']}`;
+    }
+    if (isNumeric(message['raw-instant-value'])) {
+      message['raw-instant-value'] = `${message['raw-instant-value']}`;
+    }
+
+    if (!compensated && !instantaneous) {)
       record[1] = unitConvertTemperatureValueOrInvalid(message['raw-value'] || message.value, message['raw-units'], targetUnits);
     }
     else if (compensated && !instantaneous) {
