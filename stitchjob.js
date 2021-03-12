@@ -1473,7 +1473,7 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
   const hasPressure = extantTopics.indexOf("/orgs/wd/aqe/pressure") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/pressure/" + serialNumber) >= 0;
   const hasTemperature = extantTopics.indexOf("/orgs/wd/aqe/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0;
-  const hasMagneticField = extantTopics.endsWith("magnetic_field") >= 0 || extantTopics.endsWith("magnetic_field/" + serialNumber) >= 0;
+  const hasMagneticField = extantTopics.find(v => v.endsWith("magnetic_field")) || extantTopics.find(v => v.endsWith("magnetic_field/" + serialNumber));
   const has = [
     hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity,
     hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField
