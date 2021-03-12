@@ -1400,7 +1400,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   }
   else if (message.topic.endsWith('magnetic_field') >= 0) {
     let maxExpectedComponents = 3;
-    let componentStartIdx = 5;
+    let componentStartIdx = 6;
     for (let ii = 0; ii < maxExpectedComponents; ii++) {
       let cValue = Array.isArray(message['converted-value']) ? message['converted-value'] : [];
       let rValue = Array.isArray(message['raw-value']) ? message['raw-value'] : [];
