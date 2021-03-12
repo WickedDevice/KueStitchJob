@@ -1398,7 +1398,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
   }
-  else if (message.topic.indexOf('/orgs/lgeo/magnetic_field') >= 0) {
+  else if (message.topic.endsWith('magnetic_field') >= 0) {
     let maxExpectedComponents = 3;
     let componentStartIdx = 5;
     for (let ii = 0; ii < maxExpectedComponents; ii++) {
@@ -1473,7 +1473,7 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
   const hasPressure = extantTopics.indexOf("/orgs/wd/aqe/pressure") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/pressure/" + serialNumber) >= 0;
   const hasTemperature = extantTopics.indexOf("/orgs/wd/aqe/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0;
-  const hasMagneticField = extantTopics.indexOf("/orgs/lgeo/magnetic_field") >= 0 || extantTopics.indexOf("/orgs/lgeo/magnetic_field/" + serialNumber) >= 0;
+  const hasMagneticField = extantTopics.endsWith("magnetic_field") >= 0 || extantTopics.endsWith("magnetic_field/" + serialNumber) >= 0;
   const has = [
     hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity,
     hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField
