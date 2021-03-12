@@ -1396,13 +1396,13 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   else if (message.topic.indexOf("/orgs/wd/aqe/threshold") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
-  } 
-  else if (message.topic.indexOf('/orgs/lgeo/magnetic_field') >= 0) {    
+  }
+  else if (message.topic.indexOf('/orgs/lgeo/magnetic_field') >= 0) {
     let maxExpectedComponents = 3;
     let componentStartIdx = 5;
     for (let ii = 0; ii < maxExpectedComponents; ii++) {
       let cValue = Array.isArray(message['converted-value']) ? message['converted-value'] : [];
-      let rValue = Array.isArray(message['raw-value']) ? message['raw-value'] : [];      
+      let rValue = Array.isArray(message['raw-value']) ? message['raw-value'] : [];
       record[componentStartIdx + ii] = valueOrInvalid(cValue[ii]);
       record[componentStartIdx + maxExpectedComponents + ii] = valueOrInvalid(rValue[ii]);
     }
@@ -1472,9 +1472,9 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
   const hasPressure = extantTopics.indexOf("/orgs/wd/aqe/pressure") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/pressure/" + serialNumber) >= 0;
   const hasTemperature = extantTopics.indexOf("/orgs/wd/aqe/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0;
-  const hasMagneticField = extantTopics.indexOf("/orgs/lgeo/temperature") >= 0 || extantTopics.indexOf("/orgs/lgeo/temperature/" + serialNumber) >= 0;
+  const hasMagneticField = extantTopics.indexOf("/orgs/lgeo/magnetic_field") >= 0 || extantTopics.indexOf("/orgs/lgeo/magnetic_field/" + serialNumber) >= 0;
   const has = [
-    hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity, 
+    hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity,
     hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField
   ].reverse();
   const modelCode = has.reduce((t, v) => {
