@@ -1650,7 +1650,7 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
     case 'model AW': // co2 + o3
       return 9 + additionalFields; // time, temp, hum, co2, o3, o3_raw, lat, lng, alt + [pressure]
     case 'model LA': // magnetic_field
-    return 11 + additionalFields; // time, temp, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
+    return 14 + additionalFields; // time, temp, Hmag, Haz, Hel, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1857,7 +1857,7 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
       headerRow += "co2[ppm],o3[ppb],o3[V]";
       break;
     case "model LA":
-      headerRow += "H_x[nT],H_y[nT],H_z[nT],H_x_raw[V],H_y_raw[V],H_z_raw[V]";
+      headerRow += "H_mag[nT],H_az[rad],H_el[rad],H_x[nT],H_y[nT],H_z[nT],H_x_raw[V],H_y_raw[V],H_z_raw[V]";
       break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
@@ -2000,7 +2000,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
       "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
       "model AW": ["", "temperature", "humidity", "co2", "o3", "o3_raw", "latitude", "longitude", "altitude"],
-      "model LA": ["", "temperature", "humidity", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw", "latitude", "longitude", "altitude"],
+      "model LA": ["", "temperature", "humidity", "", "", "", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2050,7 +2050,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
       "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
       "model AW": ["", tempUnits, "%", "ppm", "ppb", "V", "deg", "deg", "m"],
-      "model LA": ["", tempUnits, "%", 'nT', 'nT', 'nT', 'V', 'V', 'V', "deg", "deg", "m"],
+      "model LA": ["", tempUnits, "%", 'nT', 'rad', 'rad', 'nT', 'nT', 'nT', 'V', 'V', 'V', "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
