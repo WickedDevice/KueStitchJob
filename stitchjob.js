@@ -57,7 +57,6 @@ const getDirectories = (srcpath) => {
 const nonEPASensors = ['co2_aqi', 'pm1p0_aqi', 'voc_aqi'];
 const known_topic_prefixes = [
   "/orgs/wd/aqe/temperature",
-  "/orgs/lgeo/temperature",
   "/orgs/wd/aqe/humidity",
   "/orgs/wd/aqe/no2",
   "/orgs/wd/aqe/co",
@@ -77,7 +76,9 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/soilmoisture",
   "/orgs/wd/aqe/fuelgauge",
   "/orgs/wd/aqe/threshold",
-  "/orgs/lgeo/magnetic_field",
+  // "/orgs/lgeo/temperature",
+  // "/orgs/lgeo/magnetic_field",
+  "/orgs/wd/aqe/magnetic_field",
 ];
 
 const invalid_value_string = "---";
