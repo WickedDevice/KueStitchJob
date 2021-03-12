@@ -2000,7 +2000,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", "temperature", "humidity", "threshold", "threshold_raw", "latitude", "longitude", "altitude"],
       "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
       "model AW": ["", "temperature", "humidity", "co2", "o3", "o3_raw", "latitude", "longitude", "altitude"],
-      "model LA": ["", "temperature", "", "", "", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw"],
+      "model LA": ["", "temperature", "humidity", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2050,7 +2050,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AU": ["", tempUnits, "%", "", "V", "deg", "deg", "m"],
       "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
       "model AW": ["", tempUnits, "%", "ppm", "ppb", "V", "deg", "deg", "m"],
-      "model LA": ["", tempUnits, "", "", "", 'nT', 'nT', 'nT', 'V', 'V', 'V'],
+      "model LA": ["", tempUnits, "%", 'nT', 'nT', 'nT', 'V', 'V', 'V', "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
