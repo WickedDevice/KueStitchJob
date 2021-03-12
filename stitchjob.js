@@ -1650,7 +1650,7 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
     case 'model AW': // co2 + o3
       return 9 + additionalFields; // time, temp, hum, co2, o3, o3_raw, lat, lng, alt + [pressure]
     case 'model LA': // magnetic_field
-    return 14 + additionalFields; // time, temp, Hmag, Haz, Hel, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
+    return 15 + additionalFields; // time, temp, Hmag, Haz, Hel, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
