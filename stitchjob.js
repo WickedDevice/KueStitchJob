@@ -45,9 +45,9 @@ function generateHeapDumpAndStats(){
 setInterval(generateHeapDumpAndStats, 30000);
 */
 
-const modelsWithoutAqiNowcastHeatindex = ['model AR', 'model AT', 'model AU', 'model AV'];
+const modelsWithoutAqiNowcastHeatindex = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA'];
 const modelsWithoutTemperature = ['model AR', 'model AT', 'model AU', 'model AV'];
-const modelsWithoutHumidity = ['model AR', 'model AT', 'model AU', 'model AV'];
+const modelsWithoutHumidity = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA'];
 
 const getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter((file) => {
@@ -1649,6 +1649,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 6 + additionalFields + 1; // time, temp, hum, lat, lng, alt + [pressure] + [pressure_raw]
     case 'model AW': // co2 + o3
       return 9 + additionalFields; // time, temp, hum, co2, o3, o3_raw, lat, lng, alt + [pressure]
+    case 'model LA': // magnetic_field
+    return 11 + additionalFields; // time, temp, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1853,6 +1855,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     // why no case AV? because it's pressure only and that's handled below
     case "model AW":
       headerRow += "co2[ppm],o3[ppb],o3[V]";
+      break;
+    case "model LA":
+      headerRow += "H_x[nT],H_y[nT],H_z[nT],H_x_raw[V],H_y_raw[V],H_z_raw[V]";
       break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
