@@ -45,9 +45,9 @@ function generateHeapDumpAndStats(){
 setInterval(generateHeapDumpAndStats, 30000);
 */
 
-const modelsWithoutAqiNowcastHeatindex = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA'];
-const modelsWithoutTemperature = ['model AR', 'model AT', 'model AU', 'model AV'];
-const modelsWithoutHumidity = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA'];
+const modelsWithoutAqiNowcastHeatindex = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA', 'model AX'];
+const modelsWithoutTemperature = ['model AR', 'model AT', 'model AU', 'model AV', 'model AX'];
+const modelsWithoutHumidity = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA', 'model AX'];
 
 const getDirectories = (srcpath) => {
   return fs.readdirSync(srcpath).filter((file) => {
@@ -74,6 +74,7 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/aqi",
   "/orgs/wd/aqe/nowcast",
   "/orgs/wd/aqe/soilmoisture",
+  "/orgs/wd/aqe/distance",
   "/orgs/wd/aqe/fuelgauge",
   "/orgs/wd/aqe/threshold",
   // "/orgs/lgeo/temperature",
@@ -1390,6 +1391,10 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
   }
+  else if (message.topic.indexOf("/orgs/wd/aqe/distance") >= 0) {
+    record[3] = valueOrInvalid(message['converted-value']);
+    record[4] = valueOrInvalid(message['raw-value']);
+  }
   else if (message.topic.indexOf("/orgs/wd/aqe/fuelgauge") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
@@ -1469,6 +1474,7 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasPh = extantTopics.indexOf("/orgs/wd/aqe/water/ph") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/ph/" + serialNumber) >= 0;
   const hasTurbidity = extantTopics.indexOf("/orgs/wd/aqe/water/turbidity") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/water/turbidity/" + serialNumber) >= 0;
   const hasSoilMoisture = extantTopics.indexOf("/orgs/wd/aqe/soilmoisture") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/soilmoisture/" + serialNumber) >= 0;
+  const hasDistance = extantTopics.indexOf("/orgs/wd/aqe/distance") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/distance/" + serialNumber) >= 0;
   const hasFuelgauge = extantTopics.indexOf("/orgs/wd/aqe/fuelgague") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/fuelgauge/" + serialNumber) >= 0;
   const hasThreshold = extantTopics.indexOf("/orgs/wd/aqe/threshold") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/threshold/" + serialNumber) >= 0;
   const hasPressure = extantTopics.indexOf("/orgs/wd/aqe/pressure") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/pressure/" + serialNumber) >= 0;
@@ -1476,7 +1482,7 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasMagneticField = extantTopics.find(v => v.endsWith("magnetic_field")) || extantTopics.find(v => v.endsWith("magnetic_field/" + serialNumber));
   const has = [
     hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity,
-    hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField
+    hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField, hasDistance
   ].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
@@ -1486,50 +1492,50 @@ const getEggModelType = (dirname, extantTopics) => {
   // the rule is that 'new' sensor presence variables MUST be added to the end of the 'has' array
   console.log('modelCode = ' + modelCode);
   switch (modelCode) {
-    case         0b11: return 'model A';  // no2 + co
-    case       0b1100: return 'model B';  // so2 + o3
-    case      0b10000: return 'model C';  // NOTE: there is actually a conflict between C and N here
-    case     0b100000: return 'model D';  // co2
+    case              0b11: return 'model A';  // no2 + co
+    case            0b1100: return 'model B';  // so2 + o3
+    case           0b10000: return 'model C';  // NOTE: there is actually a conflict between C and N here
+    case          0b100000: return 'model D';  // co2
     // case 0b1100000: // NOTE: this is just for data recorded before 3/27/2018
-    case    0b1000000: return 'model E';  // voc
-    case     0b110000: return 'model G';  // co2 + particulate
-    case       0b1001: return 'model J';  // Jerry model no2 + o3, could also be model AG
-    case      0b10001: return 'model K';  // no2 + particulate
-    case      0b10010: return 'model L';  // co + particulate
-    case     0b110001: return 'model M';  // co2 + pm + no2
-    case    0b1110000: return 'model P';  // co2 + pm + voc
-    case      0b10011: return 'model Q';  // pm + co + no2
-    case      0b11001: return 'model R';  // pm + o3 + no2
-    case      0b10101: return 'model S';  // pm + so2 + no2
-    case      0b11010: return 'model T';  // pm + co + o3
-    case      0b10100: return 'model U';  // pm + so2 NOTE: there is actually a conflict between U and Y here
-    case    0b1100000: return 'model V';  // co2 + voc
-    case 0b1110000000: return 'model W';  // conductivity + pH + turbidity + water temperature
-    case    0b1010000: return 'model Z';  // pm + voc
-    case     0b110010: return 'model AA'; // co2 + particulate + co
-    case    0b1011000: return 'model AB'; // pm + voc + o3
-    case       0b0101: return 'model AC'; // so2 + no2
-    case    0b1000010: return 'model AD'; // voc + co
-    case     0b111000: return 'model AE'; // co2 + pm + o3
-    case          0b1: return 'model AF'; // no2-only
-    case    0b1010010: return 'model AH'; // pm + voc + co
-    case    0b1010001: return 'model AI'; // pm + voc + no2
-    case      0b11000: return 'model AJ'; // pm + o3
-    case     0b110100: return 'model AK'; // pm + so2 + co2
-    case      0b11100: return 'model AL'; // pm + so2 + o3
-    case       0b1010: return 'model AM'; // co + o3
-    case    0b1001000: return 'model AN'; // voc + o3
-    case    0b1000100: return 'model AO'; // voc + so2
-    case     0b100010: return 'model AP'; // co2 + co
-    case         0b10: return 'model AQ'; // co-only
-    case   0b10000000000: return 'model AR'; // soil moisture only
-    case       0b1000001: return 'model AS'; // voc + no2, a subset of AI
-    case  0b100000000000: return 'model AT'; // fuel gauge only
-    case 0b1000000000000: return 'model AU'; // threshold only
+    case         0b1000000: return 'model E';  // voc
+    case          0b110000: return 'model G';  // co2 + particulate
+    case            0b1001: return 'model J';  // Jerry model no2 + o3, could also be model AG
+    case           0b10001: return 'model K';  // no2 + particulate
+    case           0b10010: return 'model L';  // co + particulate
+    case          0b110001: return 'model M';  // co2 + pm + no2
+    case         0b1110000: return 'model P';  // co2 + pm + voc
+    case           0b10011: return 'model Q';  // pm + co + no2
+    case           0b11001: return 'model R';  // pm + o3 + no2
+    case           0b10101: return 'model S';  // pm + so2 + no2
+    case           0b11010: return 'model T';  // pm + co + o3
+    case           0b10100: return 'model U';  // pm + so2 NOTE: there is actually a conflict between U and Y here
+    case         0b1100000: return 'model V';  // co2 + voc
+    case      0b1110000000: return 'model W';  // conductivity + pH + turbidity + water temperature
+    case         0b1010000: return 'model Z';  // pm + voc
+    case          0b110010: return 'model AA'; // co2 + particulate + co
+    case         0b1011000: return 'model AB'; // pm + voc + o3
+    case            0b0101: return 'model AC'; // so2 + no2
+    case         0b1000010: return 'model AD'; // voc + co
+    case          0b111000: return 'model AE'; // co2 + pm + o3
+    case               0b1: return 'model AF'; // no2-only
+    case         0b1010010: return 'model AH'; // pm + voc + co
+    case         0b1010001: return 'model AI'; // pm + voc + no2
+    case           0b11000: return 'model AJ'; // pm + o3
+    case          0b110100: return 'model AK'; // pm + so2 + co2
+    case           0b11100: return 'model AL'; // pm + so2 + o3
+    case            0b1010: return 'model AM'; // co + o3
+    case         0b1001000: return 'model AN'; // voc + o3
+    case         0b1000100: return 'model AO'; // voc + so2
+    case          0b100010: return 'model AP'; // co2 + co
+    case              0b10: return 'model AQ'; // co-only
+    case     0b10000000000: return 'model AR'; // soil moisture only
+    case         0b1000001: return 'model AS'; // voc + no2, a subset of AI
+    case    0b100000000000: return 'model AT'; // fuel gauge only
+    case   0b1000000000000: return 'model AU'; // threshold only
     // why is there no model AV? ... because it's very special (pressure only, see below) gaugemote and hydrostaticmote?
-    case     0b101000: return 'model AW'; // co2 + o3
-    case 0b10000000000000: return 'model LA'; // leeman geophysical magnetic field
-
+    case          0b101000: return 'model AW'; // co2 + o3
+    case  0b10000000000000: return 'model LA'; // leeman geophysical magnetic field
+    case 0b100000000000000: return 'model AX'; // sharp distance sensor
 
     default:
       if (modelCode !== 0b0) {
@@ -1650,7 +1656,9 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
     case 'model AW': // co2 + o3
       return 9 + additionalFields; // time, temp, hum, co2, o3, o3_raw, lat, lng, alt + [pressure]
     case 'model LA': // magnetic_field
-    return 15 + additionalFields; // time, temp, Hmag, Haz, Hel, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
+      return 15 + additionalFields; // time, temp, Hmag, Haz, Hel, Hx, Hy, Hz, Hx_raw, Hy_raw, Hz_raw, lat, lng, alt + [pressure]
+    case 'model AX':
+      return 8 + additionalFields; // time, temp, hum, distance, distance_raw, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1859,6 +1867,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model LA":
       headerRow += "H_mag[nT],H_az[rad],H_el[rad],H_x[nT],H_y[nT],H_z[nT],H_x_raw[V],H_y_raw[V],H_z_raw[V]";
       break;
+    case "model AX":
+      headerRow += "distance[cm], distance_raw[V]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -2001,6 +2012,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AV": ["", "temperature", "humidity", "latitude", "longitude", "altitude"],
       "model AW": ["", "temperature", "humidity", "co2", "o3", "o3_raw", "latitude", "longitude", "altitude"],
       "model LA": ["", "temperature", "humidity", "", "", "", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw", "latitude", "longitude", "altitude"],
+      "model AX": ["", "temperature", "humidity", "distance", "distance_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2051,6 +2063,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AV": ["", tempUnits, "%", "deg", "deg", "m"],
       "model AW": ["", tempUnits, "%", "ppm", "ppb", "V", "deg", "deg", "m"],
       "model LA": ["", tempUnits, "%", 'nT', 'rad', 'rad', 'nT', 'nT', 'nT', 'V', 'V', 'V', "deg", "deg", "m"],
+      "model AX": ["", tempUnits, "%", "cm", "V", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
