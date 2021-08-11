@@ -1375,6 +1375,16 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       }
     }
   }
+  else if (message.topic.indexOf("/orgs/wd/aqe/presence") >= 0) {
+    if (model === 'model AX') {
+      record[5] = valueOrInvalid(message.value);
+    }
+  }
+  else if (message.topic.indexOf("/orgs/wd/aqe/count") >= 0) {
+    if (model === 'model AX') {
+      record[6] = valueOrInvalid(message.value);
+    }
+  }
   else if (message.topic.indexOf("/orgs/wd/aqe/water/conductivity") >= 0) {
     record[2] = valueOrInvalid(message.value);
     record[3] = valueOrInvalid(message['raw-value']);
@@ -1394,8 +1404,6 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   else if (message.topic.indexOf("/orgs/wd/aqe/distance") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
-    record[5] = valueOrInvalid(message['presence']);
-    record[6] = valueOrInvalid(message['count']);
   }
   else if (message.topic.indexOf("/orgs/wd/aqe/fuelgauge") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
