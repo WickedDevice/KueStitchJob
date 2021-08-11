@@ -80,6 +80,8 @@ const known_topic_prefixes = [
   // "/orgs/lgeo/temperature",
   // "/orgs/lgeo/magnetic_field",
   "/orgs/wd/aqe/magnetic_field",
+  "/orgs/wd/aqe/presence",
+  "/orgs/wd/aqe/count"
 ];
 
 const invalid_value_string = "---";
