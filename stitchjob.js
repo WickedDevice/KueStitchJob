@@ -187,8 +187,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (compensated && instantaneous) {
       record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'] || message.value, message['converted-units'], targetUnits);
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
     if (!compensated && !instantaneous) {
       record[2] = valueOrInvalid(message['raw-value']);
     }
@@ -246,9 +245,8 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     nowcast = Math.max(...nowcastSensorvalues);
   record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 2] = valueOrInvalid(nowcast);
 
-  }
-  // in CSV, GPS are always the last three coordinates, patch them in if we've got them
-  else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
+  }else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
+    // in CSV, GPS are always the last three coordinates, patch them in if we've got them
     if (model === 'model A') {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['compensated-value']);
@@ -449,8 +447,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
     if (model === 'model B') {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['compensated-value']);
@@ -599,8 +596,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/o3") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/o3") >= 0) {
     if (model === 'model B') {
       if (!compensated && !instantaneous) {
         record[4] = valueOrInvalid(message['compensated-value']);
@@ -816,8 +812,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['compensated-value']);
@@ -941,8 +936,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[8] = valueOrInvalid(message.pm2p5);
       record[9] = valueOrInvalid(message.pm10p0);
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
     let pressureIndex = -7;
     if(hasBattery) {
       pressureIndex--;
@@ -951,11 +945,13 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     if ((record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] === undefined) && !!message.altitude) {
       record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(message.altitude);
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/battery") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/count") >= 0) {
+    if (model === 'model AX') {
+      record[6] = valueOrInvalid(message.value);
+    }
+  } else if (message.topic.indexOf("/orgs/wd/aqe/battery") >= 0) {
     record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 7] = valueOrInvalid(message['converted-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
          'model AP', 'model AW'].indexOf(model) >= 0) {
@@ -972,8 +968,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[3] = valueOrInvalid(message['compensated-value']);
       }
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/co") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/co") >= 0) {
     if (model === 'model A') {
       if (!compensated && !instantaneous) {
         record[4] = valueOrInvalid(message['compensated-value']);
@@ -1154,8 +1149,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/voc") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/voc") >= 0) {
     if (model === 'model E') {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['converted-co2']);
@@ -1376,46 +1370,32 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[5] = valueOrInvalid(message['compensated-instant-resistance']);
       }
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/presence") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/presence") >= 0) {
     if (model === 'model AX') {
       record[5] = valueOrInvalid(message.value);
     }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/count") >= 0) {
-    if (model === 'model AX') {
-      record[6] = valueOrInvalid(message.value);
-    }
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/water/conductivity") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/water/conductivity") >= 0) {
     record[2] = valueOrInvalid(message.value);
     record[3] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/water/turbidity") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/water/turbidity") >= 0) {
     record[4] = valueOrInvalid(message.value);
     record[5] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/water/ph") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/water/ph") >= 0) {
     record[6] = valueOrInvalid(message.value);
     record[7] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/soilmoisture") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/soilmoisture") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/distance") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/distance") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/fuelgauge") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/fuelgauge") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.indexOf("/orgs/wd/aqe/threshold") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/threshold") >= 0) {
     record[3] = valueOrInvalid(message['converted-value']);
     record[4] = valueOrInvalid(message['raw-value']);
-  }
-  else if (message.topic.endsWith('magnetic_field') >= 0) {
+  } else if (message.topic.endsWith('magnetic_field') >= 0) {
     let maxExpectedComponents = 3;
     let componentStartIdx = 6;
     for (let ii = 0; ii < maxExpectedComponents; ii++) {
