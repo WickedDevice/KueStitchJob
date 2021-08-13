@@ -2489,6 +2489,8 @@ queue.process('stitch', concurrency, async (job, done) => {
                         ret[k] = row[k];
                       } else if (purelyNonNumericKeys.indexOf(k) < 0) {
                         ret[k] = row[k];
+                      } else {
+                        console.log(`Pruning column "${k}" because it has no values in it`);
                       }
                     });
                     return ret;
