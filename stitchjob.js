@@ -2481,6 +2481,10 @@ queue.process('stitch', concurrency, async (job, done) => {
                     }
                   });
 
+                  for (const k of purelyNonNumericKeys || []) {
+                    console.log(`Pruning column "${k}" because it has no values in it`);
+                  }
+
                   // only keep columns that have at least one numeric value in them
                   const newCsv = parsedCsv.map(row => {
                     const ret = {};
@@ -2489,8 +2493,6 @@ queue.process('stitch', concurrency, async (job, done) => {
                         ret[k] = row[k];
                       } else if (purelyNonNumericKeys.indexOf(k) < 0) {
                         ret[k] = row[k];
-                      } else {
-                        console.log(`Pruning column "${k}" because it has no values in it`);
                       }
                     });
                     return ret;
