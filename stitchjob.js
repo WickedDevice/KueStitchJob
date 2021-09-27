@@ -815,6 +815,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[5] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model AZ') {
+      record[3] = valueOrInvalid(message['compensated-value']);
+    }
   } else if (message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) {
     if (model === 'model C') {
       if (!compensated && !instantaneous) {
@@ -1532,6 +1535,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case  0b10000000000000: return 'model LA'; // leeman geophysical magnetic field
     case 0b100000000000000: return 'model AX'; // sharp distance sensor
     case          0b100100: return 'model AY'; // so2 + co2
+    case            0b1000: return 'model AZ'; // o3-only
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1656,6 +1660,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 10 + additionalFields; // time, temp, hum, distance, distance_raw, presence, count, lat, lng, alt + [pressure]
     case 'model AY': //  co2 + so2
       return 8 + additionalFields; // time, temp, hum, co2, so2, lat, lng, alt + [pressure]
+    case 'model AZ':
+      return 7 + additionalFields; // time, temp, hum, o3, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1870,6 +1876,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model AY":
       headerRow += "co2[ppm],so2[ppb]";
       break;
+    case "model AZ":
+      headerRow += "o3[ppb]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -2014,6 +2023,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model LA": ["", "temperature", "humidity", "", "", "", "magnetic_field_x", "magnetic_field_y", "magnetic_field_z", "magnetic_field_x_raw", "magnetic_field_y_raw", "magnetic_field_z_raw", "latitude", "longitude", "altitude"],
       "model AX": ["", "temperature", "humidity", "distance", "distance_raw", "presence", "count", "latitude", "longitude", "altitude"],
       "model AY": ["", "temperature", "humidity", "co2", "so2", "latitude", "longitude", "altitude"],
+      "model AZ": ["", "temperature", "humidity", "o3", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2066,6 +2076,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model LA": ["", tempUnits, "%", 'nT', 'rad', 'rad', 'nT', 'nT', 'nT', 'V', 'V', 'V', "deg", "deg", "m"],
       "model AX": ["", tempUnits, "%", "cm", "V", "n/a", "n/a", "deg", "deg", "m"],
       "model AY": ["", tempUnits, "%", "ppm", "ppb", "deg", "deg", "m"],
+      "model AZ": ["", tempUnits, "%", "ppb", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
