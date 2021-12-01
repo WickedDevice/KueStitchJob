@@ -245,7 +245,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     nowcast = Math.max(...nowcastSensorvalues);
   record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 2] = valueOrInvalid(nowcast);
 
-  }else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
+  } else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
     // in CSV, GPS are always the last three coordinates, patch them in if we've got them
     if (model === 'model A') {
       if (!compensated && !instantaneous) {
@@ -446,6 +446,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[6] = valueOrInvalid(message['compensated-value']);
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
+    }
+    else if (['model BA'].indexOf(model) >= 0) {
+      record[4] = valueOrInvalid(message['compensated-value']);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
     if (model === 'model B') {
@@ -960,7 +963,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   } else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
-         'model AP', 'model AW', 'model AY'].indexOf(model) >= 0) {
+         'model AP', 'model AW', 'model AY', 'model BA'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -1376,6 +1379,28 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[5] = valueOrInvalid(message['compensated-instant-resistance']);
       }
     }
+    else if (model === 'model BA')  {
+      if (!compensated && !instantaneous) {
+        record[5] = valueOrInvalid(message['converted-co2']);
+        record[6] = valueOrInvalid(message['converted-tvoc']);
+        record[7] = valueOrInvalid(message['converted-resistance']);
+      }
+      else if (compensated && !instantaneous) {
+        record[5] = valueOrInvalid(message['compensated-co2']);
+        record[6] = valueOrInvalid(message['compensated-tvoc']);
+        record[7] = valueOrInvalid(message['compensated-resistance']);
+      }
+      else if (!compensated && instantaneous) {
+        record[5] = valueOrInvalid(message['raw-instant-co2']);
+        record[6] = valueOrInvalid(message['raw-instant-tvoc']);
+        record[7] = valueOrInvalid(message['raw-instant-resistance']);
+      }
+      else if (compensated && instantaneous) {
+        record[5] = valueOrInvalid(message['compensated-instant-co2']);
+        record[6] = valueOrInvalid(message['compensated-instant-tvoc']);
+        record[7] = valueOrInvalid(message['compensated-instant-resistance']);
+      }
+    }
   } else if (message.topic.indexOf("/orgs/wd/aqe/presence") >= 0) {
     if (model === 'model AX') {
       record[5] = valueOrInvalid(message.value);
@@ -1536,6 +1561,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case 0b100000000000000: return 'model AX'; // sharp distance sensor
     case          0b100100: return 'model AY'; // so2 + co2
     case            0b1000: return 'model AZ'; // o3-only
+    case         0b1100001: return 'model BA'; // co2 + voc + no2
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1662,6 +1688,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
       return 8 + additionalFields; // time, temp, hum, co2, so2, lat, lng, alt + [pressure]
     case 'model AZ':
       return 7 + additionalFields; // time, temp, hum, o3, lat, lng, alt + [pressure]
+    case 'model BA': // CO2 + VOC + NO2
+      return 11 + additionalFields; // time, temp, hum, co2, no2, eco2, voc, resistance, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -1879,6 +1907,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model AZ":
       headerRow += "o3[ppb]";
       break;
+    case "model BA":
+      headerRow += "co2[ppm],no2[ppb],eco2[ppm],tvoc[ppb],resistance[ohm]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -2024,6 +2055,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AX": ["", "temperature", "humidity", "distance", "distance_raw", "presence", "count", "latitude", "longitude", "altitude"],
       "model AY": ["", "temperature", "humidity", "co2", "so2", "latitude", "longitude", "altitude"],
       "model AZ": ["", "temperature", "humidity", "o3", "latitude", "longitude", "altitude"],
+      "model BA": ["", "temperature", "humidity", "co2", "no2", "eco2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2077,6 +2109,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       "model AX": ["", tempUnits, "%", "cm", "V", "n/a", "n/a", "deg", "deg", "m"],
       "model AY": ["", tempUnits, "%", "ppm", "ppb", "deg", "deg", "m"],
       "model AZ": ["", tempUnits, "%", "ppb", "deg", "deg", "m"],
+      "model BA": ["", tempUnits, "%", "ppm", "ppb", "ppm", "ppb", "ohms", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
