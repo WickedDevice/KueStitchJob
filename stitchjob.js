@@ -2227,8 +2227,7 @@ queue.process('stitch', concurrency, async (job, done) => {
             } else if (['°C', 'degC'].includes(user.units[dir])) {
               job.data.temperatureUnits = 'degC';
             }
-          }
-          if (user.displayMetric === true) {
+          } else if (user.displayMetric === true) {
             job.data.temperatureUnits = 'degC';
           } else if (user.displayMetric === false) {
             job.data.temperatureUnits = 'degF';
