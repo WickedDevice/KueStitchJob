@@ -2220,6 +2220,14 @@ queue.process('stitch', concurrency, async (job, done) => {
         const users = await db.findDocuments('Users', { email: job.data.email });
         const user = users[0];
         if (user) {
+          // if there's a setting about this egg specifically, then that takes precedence
+          if (user.units && user.units[dir]) {
+            if (['°F', 'degF'].includes(user.units[dir])) {
+              job.data.temperatureUnits = 'degF';
+            } else if (['°C', 'degC'].includes(user.units[dir])) {
+              job.data.temperatureUnits = 'degC';
+            }
+          }
           if (user.displayMetric === true) {
             job.data.temperatureUnits = 'degC';
           } else if (user.displayMetric === false) {
