@@ -2198,6 +2198,44 @@ queue.process('stitch', concurrency, async (job, done) => {
 
   job.data.temperatureUnits = null;
 
+  let aliases = {};
+  let shortCodes = {};
+  let dbEggs = {};
+  let user = {};
+  try {
+    const users = await db.findDocuments('Users', { email: job.data.email });
+    user = users[0] || {};
+
+    const serials = Array.isArray(job.data.original_serials) ? job.data.original_serials : [job.data.original_serials];
+    let eggs;
+    try {
+      eggs = await db.findDocuments('Eggs', { serial_number: { $in: serials } });
+    } catch (e) {
+      console.warn(e.message || e, e.stack);
+    }
+    eggs = eggs || [];
+
+    // console.log(user.aliases);
+    // console.log(eggs.map(v => v.alias));
+
+    // build the alias mapper
+    eggs.forEach(egg => {
+      aliases[egg.serial_number] = egg.alias || egg.shortcode || egg.serial_number;
+      shortCodes[egg.serial_number] = egg.shortcode || '';
+      dbEggs[egg.serial_number] = {user, egg};
+    });
+
+    aliases = Object.assign({}, aliases, user.aliases);
+    // console.log(JSON.stringify(aliases, null, 2));
+
+    // store the alias mapper in the job
+    job.data.aliases = aliases;
+    job.data.shortCodes = shortCodes;
+
+  } catch (e) {
+    console.log(e.message || e, e.stack);
+  }
+
   let isThermote = false;
   const skipJob = job.data.bypassjobs && (job.data.bypassjobs.indexOf('stitch') >= 0);
   if (!skipJob) {
@@ -2217,8 +2255,6 @@ queue.process('stitch', concurrency, async (job, done) => {
     if (job.data.zipfilename && (extension === 'csv')) {
       // look up the target user email and look up the requested egg
       try {
-        const users = await db.findDocuments('Users', { email: job.data.email });
-        const user = users[0];
         if (user) {
           // if there's a setting about this egg specifically, then that takes precedence
           if (user.units && user.units[dir]) {
@@ -2234,8 +2270,7 @@ queue.process('stitch', concurrency, async (job, done) => {
           }
         }
 
-        const eggs = await db.findDocuments('Eggs', { serial_number: dir });
-        const egg = eggs[0];
+        const egg = dbEggs[dir] || {};
 
         if (egg.productLine === 'thermote') {
           isThermote = true;
@@ -2502,7 +2537,7 @@ queue.process('stitch', concurrency, async (job, done) => {
             await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
 
             // as a last step here if the Egg is a thermote, then remove any columns from the CSV file
-            // where there are no non-numeric values present
+            // where there are no non-numeric values present, also prepend a record with the short code and alias
             if (isThermote) {
               try {
                 const csvData = await readFileAsync(outputFilePath, {encoding: 'utf8'});
@@ -2539,7 +2574,19 @@ queue.process('stitch', concurrency, async (job, done) => {
                     return ret;
                   });
 
-                  const newCsvStr = await stringifyAsync(newCsv, {header: true});
+                  let newCsvStr = await stringifyAsync(newCsv, {header: true});
+
+                  let titleRow = '';
+                  if (shortCodes[dir]) {
+                    titleRow += shortCodes[dir];
+                  }
+                  if (aliases[dir] && (aliases[dir] !== shortCodes[dir])) {
+                    titleRow += `, \"${aliases[dir]}\"`;
+                  }
+                  if (titleRow) {
+                    newCsvStr = titleRow + '\n' + newCsvStr;
+                  }
+
                   await writeFileAsync(outputFilePath, newCsvStr, {encoding: 'utf8'});
                 }
               } catch(e) {
