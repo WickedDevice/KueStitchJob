@@ -2219,11 +2219,11 @@ queue.process('stitch', concurrency, async (job, done) => {
     // console.log(eggs.map(v => v.alias));
 
     // build the alias mapper
-    eggs.forEach(egg => {
+    for (const egg of eggs) {
       aliases[egg.serial_number] = egg.alias || egg.shortcode || egg.serial_number;
       shortCodes[egg.serial_number] = egg.shortcode || '';
       dbEggs[egg.serial_number] = {user, egg};
-    });
+    }
 
     aliases = Object.assign({}, aliases, user.aliases);
     // console.log(JSON.stringify(aliases, null, 2));
