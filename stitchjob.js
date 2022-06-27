@@ -2270,7 +2270,7 @@ queue.process('stitch', concurrency, async (job, done) => {
           }
         }
 
-        const egg = dbEggs[dir] || {};
+        const {egg} = dbEggs[dir] || {};
 
         if (egg.productLine === 'thermote') {
           isThermote = true;
