@@ -220,7 +220,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
    }
   } else if (message.topic.indexOf("/orgs/wd/aqe/exposure") >= 0) {
     if (model === 'model G_PI') {
-      record[34] = valueOrInvalid(message['value']);
+      record[31] = valueOrInvalid(message.value);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/aqi") >= 0) {
     let aqiSensors = [];
@@ -879,7 +879,6 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[28] = valueOrInvalid(message.pm2p5_cpl_b);
       record[29] = valueOrInvalid(message.pm5p0_cpl_b);
       record[30] = valueOrInvalid(message.pm10p0_cpl_b);
-      record[31] = valueOrInvalid(message.exposure);
     }
     else if (model === 'model K') {
       record[5] = valueOrInvalid(message.pm1p0);
