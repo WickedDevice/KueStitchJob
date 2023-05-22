@@ -1553,54 +1553,55 @@ const getEggModelType = (dirname, extantTopics) => {
   // the rule is that 'new' sensor presence variables MUST be added to the end of the 'has' array
   console.log('modelCode = ' + modelCode);
   switch (modelCode) {
-    case              0b11: return 'model A';  // no2 + co
-    case            0b1100: return 'model B';  // so2 + o3
-    case           0b10000: return 'model C';  // NOTE: there is actually a conflict between C and N here
-    case          0b100000: return 'model D';  // co2
+    case               0b11: return 'model A';  // no2 + co
+    case             0b1100: return 'model B';  // so2 + o3
+    case            0b10000: return 'model C';  // NOTE: there is actually a conflict between C and N here
+    case           0b100000: return 'model D';  // co2
     // case 0b1100000: // NOTE: this is just for data recorded before 3/27/2018
-    case         0b1000000: return 'model E';  // voc
-    case          0b110000: return 'model G';  // co2 + particulate
-    case 0b100000000010000: return 'model G_PI';  // co2 + fullparticulate
-    case            0b1001: return 'model J';  // Jerry model no2 + o3, could also be model AG
-    case           0b10001: return 'model K';  // no2 + particulate
-    case           0b10010: return 'model L';  // co + particulate
-    case          0b110001: return 'model M';  // co2 + pm + no2
-    case         0b1110000: return 'model P';  // co2 + pm + voc
-    case           0b10011: return 'model Q';  // pm + co + no2
-    case           0b11001: return 'model R';  // pm + o3 + no2
-    case           0b10101: return 'model S';  // pm + so2 + no2
-    case           0b11010: return 'model T';  // pm + co + o3
-    case           0b10100: return 'model U';  // pm + so2 NOTE: there is actually a conflict between U and Y here
-    case         0b1100000: return 'model V';  // co2 + voc
-    case      0b1110000000: return 'model W';  // conductivity + pH + turbidity + water temperature
-    case         0b1010000: return 'model Z';  // pm + voc
-    case          0b110010: return 'model AA'; // co2 + particulate + co
-    case         0b1011000: return 'model AB'; // pm + voc + o3
-    case            0b0101: return 'model AC'; // so2 + no2
-    case         0b1000010: return 'model AD'; // voc + co
-    case          0b111000: return 'model AE'; // co2 + pm + o3
-    case               0b1: return 'model AF'; // no2-only
-    case         0b1010010: return 'model AH'; // pm + voc + co
-    case         0b1010001: return 'model AI'; // pm + voc + no2
-    case           0b11000: return 'model AJ'; // pm + o3
-    case          0b110100: return 'model AK'; // pm + so2 + co2
-    case           0b11100: return 'model AL'; // pm + so2 + o3
-    case            0b1010: return 'model AM'; // co + o3
-    case         0b1001000: return 'model AN'; // voc + o3
-    case         0b1000100: return 'model AO'; // voc + so2
-    case          0b100010: return 'model AP'; // co2 + co
-    case              0b10: return 'model AQ'; // co-only
-    case     0b10000000000: return 'model AR'; // soil moisture only
-    case         0b1000001: return 'model AS'; // voc + no2, a subset of AI
-    case    0b100000000000: return 'model AT'; // fuel gauge only
-    case   0b1000000000000: return 'model AU'; // threshold only
+    case          0b1000000: return 'model E';  // voc
+    case           0b110000: return 'model G';  // co2 + particulate
+
+    case 0b1000000000100000: return 'model G_PI';  // co2 + fullparticulate
+    case             0b1001: return 'model J';  // Jerry model no2 + o3, could also be model AG
+    case            0b10001: return 'model K';  // no2 + particulate
+    case            0b10010: return 'model L';  // co + particulate
+    case           0b110001: return 'model M';  // co2 + pm + no2
+    case          0b1110000: return 'model P';  // co2 + pm + voc
+    case            0b10011: return 'model Q';  // pm + co + no2
+    case            0b11001: return 'model R';  // pm + o3 + no2
+    case            0b10101: return 'model S';  // pm + so2 + no2
+    case            0b11010: return 'model T';  // pm + co + o3
+    case            0b10100: return 'model U';  // pm + so2 NOTE: there is actually a conflict between U and Y here
+    case          0b1100000: return 'model V';  // co2 + voc
+    case       0b1110000000: return 'model W';  // conductivity + pH + turbidity + water temperature
+    case          0b1010000: return 'model Z';  // pm + voc
+    case           0b110010: return 'model AA'; // co2 + particulate + co
+    case          0b1011000: return 'model AB'; // pm + voc + o3
+    case             0b0101: return 'model AC'; // so2 + no2
+    case          0b1000010: return 'model AD'; // voc + co
+    case           0b111000: return 'model AE'; // co2 + pm + o3
+    case                0b1: return 'model AF'; // no2-only
+    case          0b1010010: return 'model AH'; // pm + voc + co
+    case          0b1010001: return 'model AI'; // pm + voc + no2
+    case            0b11000: return 'model AJ'; // pm + o3
+    case           0b110100: return 'model AK'; // pm + so2 + co2
+    case            0b11100: return 'model AL'; // pm + so2 + o3
+    case             0b1010: return 'model AM'; // co + o3
+    case          0b1001000: return 'model AN'; // voc + o3
+    case          0b1000100: return 'model AO'; // voc + so2
+    case           0b100010: return 'model AP'; // co2 + co
+    case               0b10: return 'model AQ'; // co-only
+    case      0b10000000000: return 'model AR'; // soil moisture only
+    case          0b1000001: return 'model AS'; // voc + no2, a subset of AI
+    case     0b100000000000: return 'model AT'; // fuel gauge only
+    case    0b1000000000000: return 'model AU'; // threshold only
     // why is there no model AV? ... because it's very special (pressure only, see below) gaugemote and hydrostaticmote?
-    case          0b101000: return 'model AW'; // co2 + o3
-    case  0b10000000000000: return 'model LA'; // leeman geophysical magnetic field
-    case 0b100000000000000: return 'model AX'; // sharp distance sensor
-    case          0b100100: return 'model AY'; // so2 + co2
-    case            0b1000: return 'model AZ'; // o3-only
-    case         0b1100001: return 'model BA'; // co2 + voc + no2
+    case           0b101000: return 'model AW'; // co2 + o3
+    case   0b10000000000000: return 'model LA'; // leeman geophysical magnetic field
+    case  0b100000000000000: return 'model AX'; // sharp distance sensor
+    case           0b100100: return 'model AY'; // so2 + co2
+    case             0b1000: return 'model AZ'; // o3-only
+    case          0b1100001: return 'model BA'; // co2 + voc + no2
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
