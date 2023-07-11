@@ -2474,6 +2474,11 @@ queue.process('stitch', concurrency, async (job, done) => {
         job.log(`Egg Serial Number ${dir} is ${modelType} type`);
 
         timeBase = determineTimebase(dir, timebaseItems, uniqueTopics);
+        if (extension === 'csv') { // qualifying this for CSV mostly because I don't remember why 'json' is ever used at the moment
+          if (timeBase > 60000) { // 60000 is arbitrary here, one minute -- this condition is always true for zynect products
+            timeBase = 5000; // if the time base appears to be 'really long' assume clustering is pretty tight in reality, because it usually is
+          }
+        }
         job.log(`Egg Serial Number ${dir} has timebase of ${timeBase} ms`);
         resolve();
       });
