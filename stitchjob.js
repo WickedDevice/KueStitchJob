@@ -122,7 +122,7 @@ const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
   }
 };
 
-const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, currentTemperatureUnits = 'C', job = {}) => {
+const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, hasAC, currentTemperatureUnits = 'C', job = {}) => {
   const natural_topic = message.topic.replace(`/${message['serial-number']}`, '');
   if (known_topic_prefixes.indexOf(natural_topic) < 0) {
     if (natural_topic.indexOf("heartbeat") < 0) {
@@ -157,9 +157,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   let aqi = '---';
   let nowcast = '---';
 
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(altitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 5] = valueOrInvalid(longitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 6] = valueOrInvalid(latitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(altitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 5] = valueOrInvalid(longitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);
 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/temperature") >= 0) {
@@ -215,7 +215,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       if(heatIndexObj) {
         heatIndex = heatIndexObj.value;
       }
-      record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 1] = valueOrInvalid(heatIndex);
+      record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 1] = valueOrInvalid(heatIndex);
 
    }
   } else if (message.topic.indexOf("/orgs/wd/aqe/exposure") >= 0) {
@@ -242,14 +242,14 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     } else {
       aqi = Math.max(...nonEpaSensorValues);
     }
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 3] = valueOrInvalid(aqi);
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 3] = valueOrInvalid(aqi);
   } else if (message.topic.indexOf("/orgs/wd/aqe/nowcast") >= 0) {
     let nowcastSensorvalues = [];
     if(message.nowcast) {
       nowcastSensorvalues = Object.keys(message.nowcast).map(v => message.nowcast[v]);
     }
     nowcast = Math.max(...nowcastSensorvalues);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 2] = valueOrInvalid(nowcast);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 2] = valueOrInvalid(nowcast);
 
   } else if (message.topic.indexOf("/orgs/wd/aqe/no2") >= 0) {
     // in CSV, GPS are always the last three coordinates, patch them in if we've got them
@@ -985,16 +985,19 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     if(hasBattery) {
       pressureIndex--;
     }
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery) + pressureIndex] = valueOrInvalid(message.pressure);
-    if ((record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] === undefined) && !!message.altitude) {
-      record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 4] = valueOrInvalid(message.altitude);
+    if(hasAC) {
+      pressureIndex--;
+    }    
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) + pressureIndex] = valueOrInvalid(message.pressure);
+    if ((record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] === undefined) && !!message.altitude) {
+      record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(message.altitude);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/count") >= 0) {
     if (model === 'model AX') {
       record[6] = valueOrInvalid(message.value);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/battery") >= 0) {
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery) - 7] = valueOrInvalid(message['converted-value']);
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 7] = valueOrInvalid(message['converted-value']);
   } else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model G_PI', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
@@ -1614,12 +1617,15 @@ const getEggModelType = (dirname, extantTopics) => {
   }
 };
 
-const getRecordLengthByModelType = (modelType, hasPressure, hasBattery) => {
+const getRecordLengthByModelType = (modelType, hasPressure, hasBattery, hasAC) => {
   var additionalFields = 0;
   if(hasPressure){
     additionalFields++;
   }
   if(hasBattery) {
+    additionalFields++;
+  }
+  if (hasAC) {
     additionalFields++;
   }
   additionalFields += 3;
@@ -1788,7 +1794,7 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
   return jStat.mean(timeDiffs);
 };
 
-const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, hasBattery) => {
+const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, hasBattery, hasAC) => {
   if (!temperatureUnits) {
     temperatureUnits = "???";
   }
@@ -1971,6 +1977,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
   if (hasBattery) {
     headerRow += ",battery[V]";
   }
+  if (hasAC) {
+    headerRow += ",ac[0/1]";
+  }
 
   headerRow += `,latitude[deg],longitude[deg],altitude[m]`;
   const shouldIncludeAqiEtc = modelsWithoutAqiNowcastHeatindex.indexOf(model) < 0;
@@ -2001,7 +2010,7 @@ const getTemperatureUnits = (items) => {
 //   fields: {field_key: field_value, ... },
 //   timestamp: Date
 // }
-const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
+const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
   let r = record.slice();
 
   if (format === 'csv') {
@@ -2028,7 +2037,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
 
     r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
     let num_non_trivial_fields = 0;
-    for (let i = 0; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery) - removed_fields; i++) {
+    for (let i = 0; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery, hasAC) - removed_fields; i++) {
       if (r[i] === undefined) {
         r[i] = invalid_value_string;
       }
@@ -2190,6 +2199,18 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       });
     }
 
+    if (hasAC) {
+      // ac is always going to be assumed to come right before the GPS data (and after battery)
+      // if we have battery, add it in at the expected record offset
+      Object.keys(modelInfluxFieldsMap).forEach((key) => {
+        modelInfluxFieldsMap[key].splice(modelInfluxFieldsMap[key].length - 3, 0, "ac");
+      });
+
+      Object.keys(modelInfluxTagsMap).forEach((key) => {
+        modelInfluxTagsMap[key].splice(modelInfluxTagsMap[key].length - 3, 0, "0/1");
+      });      
+    }
+
     if (moment(r[0]).isValid()) {
       const influxRecord = {
         measurement: 'egg_data',
@@ -2199,7 +2220,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, utcOf
       };
 
       let num_non_trivial_fields = 0;
-      for (let i = 1; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery); i++) {
+      for (let i = 1; i < getRecordLengthByModelType(modelType, hasPressure, hasBattery, hasAC); i++) {
         if (r[i] !== undefined) {
           num_non_trivial_fields++;
           let fields = modelInfluxFieldsMap[modelType][i];
@@ -2358,6 +2379,7 @@ queue.process('stitch', concurrency, async (job, done) => {
     let modelType = null;
     let hasPressure = false;
     let hasBattery = false;
+    let hasAC = false;
     const timebaseItems = []; // for the benefit of determineTimebase
     let rowsWritten = 0;
     let totalMessages = 0;
@@ -2443,6 +2465,10 @@ queue.process('stitch', concurrency, async (job, done) => {
             if (item.topic.indexOf("battery") >= 0) {
               hasBattery = true;
             }
+            if (item.ac !== undefined) {
+              hasAC = true;
+            }
+
             uniqueTopics[item.topic] = 1;
             job.data.temperatureUnits = job.data.temperatureUnits || getTemperatureUnits([item]);
           });
@@ -2502,7 +2528,7 @@ queue.process('stitch', concurrency, async (job, done) => {
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
 
           if (extension === 'csv') {
-            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery);
+            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery, hasAC);
           }
           else if (extension === 'json' && (totalMessages > 0)) {
             await appendFileAsync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
@@ -2534,7 +2560,7 @@ queue.process('stitch', concurrency, async (job, done) => {
                       if (datum.topic.indexOf("temperature") >= 0) {
                         currentTemperatureUnits = datum["converted-units"];
                       }
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, currentTemperatureUnits, job);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, currentTemperatureUnits, job);
                       // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
@@ -2543,17 +2569,17 @@ queue.process('stitch', concurrency, async (job, done) => {
                     else {
                       // if the record is non-trivial, add it
                       if (extension === 'csv') {
-                        await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+                        await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset));
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if (job.data.stitch_format === 'influx') {
-                        await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                        await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
                       }
                       rowsWritten++;
 
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, 'C', job);
+                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, 'C', job);
                       // console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
@@ -2585,7 +2611,7 @@ queue.process('stitch', concurrency, async (job, done) => {
           job.log(`Finished processing all JSON files, committing last record`);
           // make sure to commit the last record to file in whatever state it's in
           if (extension === 'csv') {
-            await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset));
+            await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset));
 
             // as a last step here if the Egg is a thermote, then remove any columns from the CSV file
             // where there are no non-numeric values present, also prepend a record with the short code and alias
@@ -2647,7 +2673,7 @@ queue.process('stitch', concurrency, async (job, done) => {
           }
           else if (job.data.stitch_format === 'influx') {
             if (totalMessages > 0) {
-              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, job.data.utcOffset, job.data.temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+              await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, job.data.temperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
               await appendFileAsync(`${job.data.save_path}/${dir}.json`, ']'); // end the array
             }
           }
