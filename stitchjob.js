@@ -453,7 +453,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
-    else if (['model BA'].indexOf(model) >= 0) {
+    else if (['model BA', 'model BB'].indexOf(model) >= 0) {
       record[4] = valueOrInvalid(message['compensated-value']);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
@@ -1001,7 +1001,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   } else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model G_PI', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
-         'model AP', 'model AW', 'model AY', 'model BA'].indexOf(model) >= 0) {
+         'model AP', 'model AW', 'model AY', 'model BA', 'model BB'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -1604,6 +1604,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case           0b100100: return 'model AY'; // so2 + co2
     case             0b1000: return 'model AZ'; // o3-only
     case          0b1100001: return 'model BA'; // co2 + voc + no2
+    case           0b100001: return 'model BB'; // co2 + no2
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1737,6 +1738,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery, hasAC) =
       return 7 + additionalFields; // time, temp, hum, o3, lat, lng, alt + [pressure]
     case 'model BA': // CO2 + VOC + NO2
       return 11 + additionalFields; // time, temp, hum, co2, no2, eco2, voc, resistance, lat, lng, alt + [pressure]
+    case 'model BB': // CO2 + NO2
+      return 8 + additionalFields; // time, temp, hum, co2, no2, lat, lng, alt + [pressure]      
     default:
       return 6 + additionalFields;
   }
@@ -1960,6 +1963,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model BA":
       headerRow += "co2[ppm],no2[ppb],eco2[ppm],tvoc[ppb],resistance[ohm]";
       break;
+    case "model BB":
+      headerRow += "co2[ppm],no2[ppb]";
+      break;
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -2110,6 +2116,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model AY": ["", "temperature", "humidity", "co2", "so2", "latitude", "longitude", "altitude"],
       "model AZ": ["", "temperature", "humidity", "o3", "latitude", "longitude", "altitude"],
       "model BA": ["", "temperature", "humidity", "co2", "no2", "eco2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
+      "model BB": ["", "temperature", "humidity", "co2", "no2", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2165,6 +2172,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model AY": ["", tempUnits, "%", "ppm", "ppb", "deg", "deg", "m"],
       "model AZ": ["", tempUnits, "%", "ppb", "deg", "deg", "m"],
       "model BA": ["", tempUnits, "%", "ppm", "ppb", "ppm", "ppb", "ohms", "deg", "deg", "m"],
+      "model BB": ["", tempUnits, "%", "ppm", "ppb", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
