@@ -511,6 +511,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[4] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     }
+    else if (model === 'model U_PI') {
+      record[3] = valueOrInvalid(message['compensated-value']);
+    }    
     else if (model === 'model Y') {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['converted-value']);
@@ -851,7 +854,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[5] = valueOrInvalid(message.pm2p5);
       record[6] = valueOrInvalid(message.pm10p0);
     }
-    else if (model === 'model G_PI') {
+    else if (['model G_PI', 'model U_PI'].includes(model)) {
       record[4] = valueOrInvalid(message.pm1p0);
       record[5] = valueOrInvalid(message.pm2p5);
       record[6] = valueOrInvalid(message.pm10p0);
@@ -1501,6 +1504,7 @@ const refineModelType = (modelType, data) => {
       }
       break;
     case 'model U':
+    case 'model U_PI':
       dat = data.find(v => v.topic.indexOf('so2') >= 0);
       if (dat) {
         if (dat['raw-value2'] !== undefined) {
@@ -1574,6 +1578,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case            0b10101: return 'model S';  // pm + so2 + no2
     case            0b11010: return 'model T';  // pm + co + o3
     case            0b10100: return 'model U';  // pm + so2 NOTE: there is actually a conflict between U and Y here
+    case 0b1000000000000100: return 'model U_PI';  // full_particulate + so2
     case          0b1100000: return 'model V';  // co2 + voc
     case       0b1110000000: return 'model W';  // conductivity + pH + turbidity + water temperature
     case          0b1010000: return 'model Z';  // pm + voc
@@ -1670,6 +1675,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery, hasAC) =
       return 13 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, o3_raw, o3, co_raw, co, lat, lng, alt + [pressure]
     case 'model U': // SO2 (kwj) + PM
       return 11 + additionalFields; // time, temp, hum, so2, so2_raw, pm1p0, pm2p5, pm10p0, lat, lng, alt + [pressure]
+    case 'model U_PI': // SO2 (winsen) + PM
+      return 35 + additionalFields; // time, temp, hum, so2, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
     case 'model V': // CO2 + VOC
       return 10 + additionalFields; // time, temp, hum, co2, eco2, voc, resistance, lat, lng, alt + [pressure]
     case 'model W':
@@ -1867,6 +1874,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
       break;
     case "model U":
       headerRow += "so2[ppb],so2[V],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3]";
+      break;
+    case "model U_PI":
+      headerRow += "so2[ppb],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],pm1.0_cf1_a[ug/m^3],pm2.5_cf1_a[ug/m^3],pm10.0_cf1_a[ug/m^3],pm1.0_atm_a[ug/m^3],pm2.5_atm_a[ug/m^3],pm10.0_atm_a[ug/m^3],pm0.3_cpl_a[counts/L],pm0.5_cpl_a[counts/L],pm1.0_cpl_a[counts/L],pm2.5_cpl_a[counts/L],pm5.0_cpl_a[counts/L],pm10.0_cpl_a[counts/L],pm1.0_cf1_b[ug/m^3],pm2.5_cf1_b[ug/m^3],pm10.0_cf1_b[ug/m^3],pm1.0_atm_b[ug/m^3],pm2.5_atm_b[ug/m^3],pm10.0_atm_b[ug/m^3],pm0.3_cpl_b[counts/L],pm0.5_cpl_b[counts/L],pm1.0_cpl_b[counts/L],pm2.5_cpl_b[counts/L],pm5.0_cpl_b[counts/L],pm10.0_cpl_b[counts/L],exposure[#]";
       break;
     case "model V":
       headerRow += "co2[ppm],eco2[ppm],tvoc[ppb],resistance[ohm]";
@@ -2084,6 +2094,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model S": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "so2", "so2_raw", "no2", "no2_raw", "latitude", "longitude", "altitude"],
       "model T": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "o3", "o3_raw", "co", "co_raw", "latitude", "longitude", "altitude"],
       "model U": ["", "temperature", "humidity", "so2", "so2_raw", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
+      "model U_PI": ["", "temperature", "humidity", "so2", "pm1p0", "pm2p5", "pm10p0", "pm1p0_cf1_a", "pm2p5_cf1_a", "pm10p0_cf1_a", "pm1p0_atm_a", "pm2p5_atm_a", "pm10p0_atm_a", "pm0p3_cpl_a", "pm0p5_cpl_a", "pm1p0_cpl_a", "pm2p5_cpl_a", "pm5p0_cpl_a", "pm10p0_cpl_a", "pm1p0_cf1_b", "pm2p5_cf1_b", "pm10p0_cf1_b", "pm1p0_atm_b", "pm2p5_atm_b", "pm10p0_atm_b", "pm0p3_cpl_b", "pm0p5_cpl_b", "pm1p0_cpl_b", "pm2p5_cpl_b", "pm5p0_cpl_b", "pm10p0_cpl_b", "exposure", "longitude", "altitude"],
       "model V": ["", "temperature", "humidity", "co2", "eco2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
       "model W": ["", "temperature", "conductivity", "conductivity_raw", "turbidity", "turbidity_raw", "ph", "ph_raw", "latitude", "longitude", "altitude"],
       "model Y": ["", "temperature", "humidity", "so2", "so2_raw", "so2_raw2", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
@@ -2140,6 +2151,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model S": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppb", "V", "deg", "deg", "m"],
       "model T": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ppb", "V", "ppm", "V", "deg", "deg", "m"],
       "model U": ["", tempUnits, "%", "ppb", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],
+      "model U_PI": ["", tempUnits, "%", "ppb", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "#", "deg", "deg", "m"],
       "model V": ["", tempUnits, "%", "ppm", "ppm", "ppb", "ohms", "deg", "deg", "m"],
       "model W": ["", tempUnits, "mS/cm", "V", "NTU", "V", "n/a", "V", "deg", "deg", "m"],
       "model Y": ["", tempUnits, "%", "ppb", "V", "V", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],
