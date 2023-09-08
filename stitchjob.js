@@ -219,9 +219,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
 
    }
   } else if (message.topic.indexOf("/orgs/wd/aqe/exposure") >= 0) {
-    if (model === 'model G_PI') {
+    if (['model G_PI', 'model U_PI'].includes(model)) {
       record[31] = valueOrInvalid(message.value);
-    }
+    } 
   } else if (message.topic.indexOf("/orgs/wd/aqe/aqi") >= 0) {
     let aqiSensors = [];
     if(message.aqi) {
