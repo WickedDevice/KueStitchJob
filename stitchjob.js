@@ -883,6 +883,35 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[29] = valueOrInvalid(message.pm5p0_cpl_b);
       record[30] = valueOrInvalid(message.pm10p0_cpl_b);
     }
+    else if (['model C_PI'].includes(model)) {
+      record[3] = valueOrInvalid(message.pm1p0);
+      record[4] = valueOrInvalid(message.pm2p5);
+      record[5] = valueOrInvalid(message.pm10p0);
+      record[6] = valueOrInvalid(message.pm1p0_cf1_a);
+      record[7] = valueOrInvalid(message.pm2p5_cf1_a);
+      record[8] = valueOrInvalid(message.pm10p0_cf1_a);
+      record[9] = valueOrInvalid(message.pm1p0_atm_a);
+      record[10] = valueOrInvalid(message.pm2p5_atm_a);
+      record[11] = valueOrInvalid(message.pm10p0_atm_a);
+      record[12] = valueOrInvalid(message.pm0p3_cpl_a);
+      record[13] = valueOrInvalid(message.pm0p5_cpl_a);
+      record[14] = valueOrInvalid(message.pm1p0_cpl_a);
+      record[15] = valueOrInvalid(message.pm2p5_cpl_a);
+      record[16] = valueOrInvalid(message.pm5p0_cpl_a);
+      record[17] = valueOrInvalid(message.pm10p0_cpl_a);
+      record[18] = valueOrInvalid(message.pm1p0_cf1_b);
+      record[19] = valueOrInvalid(message.pm2p5_cf1_b);
+      record[20] = valueOrInvalid(message.pm10p0_cf1_b);
+      record[21] = valueOrInvalid(message.pm1p0_atm_b);
+      record[22] = valueOrInvalid(message.pm2p5_atm_b);
+      record[23] = valueOrInvalid(message.pm10p0_atm_b);
+      record[24] = valueOrInvalid(message.pm0p3_cpl_b);
+      record[25] = valueOrInvalid(message.pm0p5_cpl_b);
+      record[26] = valueOrInvalid(message.pm1p0_cpl_b);
+      record[27] = valueOrInvalid(message.pm2p5_cpl_b);
+      record[28] = valueOrInvalid(message.pm5p0_cpl_b);
+      record[29] = valueOrInvalid(message.pm10p0_cpl_b);
+    }
     else if (model === 'model K') {
       record[5] = valueOrInvalid(message.pm1p0);
       record[6] = valueOrInvalid(message.pm2p5);
@@ -1562,6 +1591,7 @@ const getEggModelType = (dirname, extantTopics) => {
     case               0b11: return 'model A';  // no2 + co
     case             0b1100: return 'model B';  // so2 + o3
     case            0b10000: return 'model C';  // NOTE: there is actually a conflict between C and N here
+    case 0b1000000000000000: return 'model C_PI';  // fullparticulate
     case           0b100000: return 'model D';  // co2
     // case 0b1100000: // NOTE: this is just for data recorded before 3/27/2018
     case          0b1000000: return 'model E';  // voc
@@ -1643,6 +1673,8 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery, hasAC) =
       return 10 + additionalFields; // time, temp, hum, so2, so2_raw, o3, o3_raw, lat, lng, alt + [pressure]
     case 'model C':
       return 8 + additionalFields; // time, temp, hum, pm, pm_raw, lat, lng, alt + [pressure]
+    case 'model C_PI':
+      return 34 + additionalFields; // time, temp, hum, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]      
     case 'model D':
       return 7 + additionalFields; // time, temp, hum, co2, lat, lng, alt + [pressure]
     case 'model E':
@@ -1830,6 +1862,9 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model C":
       headerRow += "pm[ug/m^3],pm[V]";
       break;
+    case 'model C_PI':
+      headerRow += "pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],pm1.0_cf1_a[ug/m^3],pm2.5_cf1_a[ug/m^3],pm10.0_cf1_a[ug/m^3],pm1.0_atm_a[ug/m^3],pm2.5_atm_a[ug/m^3],pm10.0_atm_a[ug/m^3],pm0.3_cpl_a[counts/L],pm0.5_cpl_a[counts/L],pm1.0_cpl_a[counts/L],pm2.5_cpl_a[counts/L],pm5.0_cpl_a[counts/L],pm10.0_cpl_a[counts/L],pm1.0_cf1_b[ug/m^3],pm2.5_cf1_b[ug/m^3],pm10.0_cf1_b[ug/m^3],pm1.0_atm_b[ug/m^3],pm2.5_atm_b[ug/m^3],pm10.0_atm_b[ug/m^3],pm0.3_cpl_b[counts/L],pm0.5_cpl_b[counts/L],pm1.0_cpl_b[counts/L],pm2.5_cpl_b[counts/L],pm5.0_cpl_b[counts/L],pm10.0_cpl_b[counts/L],exposure[#]";
+      break;      
     case "model D":
       headerRow += "co2[ppm]";
       break;
@@ -2078,6 +2113,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model A": ["", "temperature", "humidity", "no2", "co", "no2_raw", "co_raw", "latitude", "longitude", "altitude"],
       "model B": ["", "temperature", "humidity", "so2", "o3", "so2_raw", "o3_raw", "latitude", "longitude", "altitude"],
       "model C": ["", "temperature", "humidity", "particulate", "particulate_raw", "latitude", "longitude", "altitude"],
+      "model C_PI": ["", "temperature", "humidity", "pm1p0", "pm2p5", "pm10p0", "pm1p0_cf1_a", "pm2p5_cf1_a", "pm10p0_cf1_a", "pm1p0_atm_a", "pm2p5_atm_a", "pm10p0_atm_a", "pm0p3_cpl_a", "pm0p5_cpl_a", "pm1p0_cpl_a", "pm2p5_cpl_a", "pm5p0_cpl_a", "pm10p0_cpl_a", "pm1p0_cf1_b", "pm2p5_cf1_b", "pm10p0_cf1_b", "pm1p0_atm_b", "pm2p5_atm_b", "pm10p0_atm_b", "pm0p3_cpl_b", "pm0p5_cpl_b", "pm1p0_cpl_b", "pm2p5_cpl_b", "pm5p0_cpl_b", "pm10p0_cpl_b", "exposure", "latitude", "longitude", "altitude"],
       "model D": ["", "temperature", "humidity", "co2", "latitude", "longitude", "altitude"],
       "model E": ["", "temperature", "humidity", "eco2|co2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
       "model G": ["", "temperature", "humidity", "co2", "pm1p0", "pm2p5", "pm10p0", "latitude", "longitude", "altitude"],
@@ -2135,6 +2171,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model A": ["", tempUnits, "%", "ppb", "ppm", "V", "V", "deg", "deg", "m"],
       "model B": ["", tempUnits, "%", "ppb", "ppb", "V", "V", "deg", "deg", "m"],
       "model C": ["", tempUnits, "%", "ug/m^3", "V", "deg", "deg", "m"],
+      "model C_PI": ["", tempUnits, "%", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "#", "deg", "deg", "m"],
       "model D": ["", tempUnits, "%", "ppm", "deg", "deg", "m"],
       "model E": ["", tempUnits, "%", "ppm", "ppb", "ohms", "deg", "deg", "m"],
       "model G": ["", tempUnits, "%", "ppm", "ug/m^3", "ug/m^3", "ug/m^3", "deg", "deg", "m"],
