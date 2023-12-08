@@ -454,10 +454,17 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[6] = valueOrInvalid(message['compensated-value']);
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
-    }
-    else if (['model BA', 'model BB'].indexOf(model) >= 0) {
-      record[4] = valueOrInvalid(message['compensated-value']);
-    }
+    } else {
+      const offsetByModel = {
+        'model BA': 4,
+        'model BB': 4,
+        'model BE': 3,
+      }
+      const offset = offsetByModel[model];
+      if (isNumeric(offset)) {
+        record[offset] = valueOrInvalid(message['compensated-value']);
+      }
+    } 
   } else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
     if (model === 'model B') {
       if (!compensated && !instantaneous) {
@@ -612,6 +619,23 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
     else if (model === 'model AY') {
       record[4] = valueOrInvalid(message['compensated-value']);
+    } else {
+      const offsetByModel = {
+        'model BC': 4,
+        'model BE': 4,
+      }
+      const offset = offsetByModel[model];
+      if (isNumeric(offset)) {
+        record[offset] = valueOrInvalid(message['compensated-value']);      
+      }            
+    }
+  } else if (message.topic.indexOf("/orgs/wd/aqe/h2s") >= 0) {
+    const offsetByModel = {
+      'model BD': 4,
+    };
+    const offset = offsetByModel[model];
+    if (isNumeric(offset)) {
+      record[offset] = valueOrInvalid(message['compensated-value']);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/o3") >= 0) {
     if (model === 'model B') {
@@ -831,6 +855,15 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
     else if (model === 'model AZ') {
       record[3] = valueOrInvalid(message['compensated-value']);
+    } else {
+      const offsetByModel = {
+        'model BC': 4,
+        'model BE': 4,
+      }
+      const offset = offsetByModel[model];
+      if (isNumeric(offset)) {
+        record[offset] = valueOrInvalid(message['compensated-value']);      
+      }
     }
   } else if ((message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) || (message.topic.indexOf("/orgs/wd/aqe/full_particulate") >= 0)) {
     if (model === 'model C') {
@@ -856,63 +889,50 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[5] = valueOrInvalid(message.pm2p5);
       record[6] = valueOrInvalid(message.pm10p0);
     }
-    else if (['model G_PI', 'model U_PI'].includes(model)) {
-      record[4] = valueOrInvalid(message.pm1p0);
-      record[5] = valueOrInvalid(message.pm2p5);
-      record[6] = valueOrInvalid(message.pm10p0);
-      record[7] = valueOrInvalid(message.pm1p0_cf1_a);
-      record[8] = valueOrInvalid(message.pm2p5_cf1_a);
-      record[9] = valueOrInvalid(message.pm10p0_cf1_a);
-      record[10] = valueOrInvalid(message.pm1p0_atm_a);
-      record[11] = valueOrInvalid(message.pm2p5_atm_a);
-      record[12] = valueOrInvalid(message.pm10p0_atm_a);
-      record[13] = valueOrInvalid(message.pm0p3_cpl_a);
-      record[14] = valueOrInvalid(message.pm0p5_cpl_a);
-      record[15] = valueOrInvalid(message.pm1p0_cpl_a);
-      record[16] = valueOrInvalid(message.pm2p5_cpl_a);
-      record[17] = valueOrInvalid(message.pm5p0_cpl_a);
-      record[18] = valueOrInvalid(message.pm10p0_cpl_a);
-      record[19] = valueOrInvalid(message.pm1p0_cf1_b);
-      record[20] = valueOrInvalid(message.pm2p5_cf1_b);
-      record[21] = valueOrInvalid(message.pm10p0_cf1_b);
-      record[22] = valueOrInvalid(message.pm1p0_atm_b);
-      record[23] = valueOrInvalid(message.pm2p5_atm_b);
-      record[24] = valueOrInvalid(message.pm10p0_atm_b);
-      record[25] = valueOrInvalid(message.pm0p3_cpl_b);
-      record[26] = valueOrInvalid(message.pm0p5_cpl_b);
-      record[27] = valueOrInvalid(message.pm1p0_cpl_b);
-      record[28] = valueOrInvalid(message.pm2p5_cpl_b);
-      record[29] = valueOrInvalid(message.pm5p0_cpl_b);
-      record[30] = valueOrInvalid(message.pm10p0_cpl_b);
-    }
-    else if (['model C_PI'].includes(model)) {
-      record[3] = valueOrInvalid(message.pm1p0);
-      record[4] = valueOrInvalid(message.pm2p5);
-      record[5] = valueOrInvalid(message.pm10p0);
-      record[6] = valueOrInvalid(message.pm1p0_cf1_a);
-      record[7] = valueOrInvalid(message.pm2p5_cf1_a);
-      record[8] = valueOrInvalid(message.pm10p0_cf1_a);
-      record[9] = valueOrInvalid(message.pm1p0_atm_a);
-      record[10] = valueOrInvalid(message.pm2p5_atm_a);
-      record[11] = valueOrInvalid(message.pm10p0_atm_a);
-      record[12] = valueOrInvalid(message.pm0p3_cpl_a);
-      record[13] = valueOrInvalid(message.pm0p5_cpl_a);
-      record[14] = valueOrInvalid(message.pm1p0_cpl_a);
-      record[15] = valueOrInvalid(message.pm2p5_cpl_a);
-      record[16] = valueOrInvalid(message.pm5p0_cpl_a);
-      record[17] = valueOrInvalid(message.pm10p0_cpl_a);
-      record[18] = valueOrInvalid(message.pm1p0_cf1_b);
-      record[19] = valueOrInvalid(message.pm2p5_cf1_b);
-      record[20] = valueOrInvalid(message.pm10p0_cf1_b);
-      record[21] = valueOrInvalid(message.pm1p0_atm_b);
-      record[22] = valueOrInvalid(message.pm2p5_atm_b);
-      record[23] = valueOrInvalid(message.pm10p0_atm_b);
-      record[24] = valueOrInvalid(message.pm0p3_cpl_b);
-      record[25] = valueOrInvalid(message.pm0p5_cpl_b);
-      record[26] = valueOrInvalid(message.pm1p0_cpl_b);
-      record[27] = valueOrInvalid(message.pm2p5_cpl_b);
-      record[28] = valueOrInvalid(message.pm5p0_cpl_b);
-      record[29] = valueOrInvalid(message.pm10p0_cpl_b);
+    else if ([
+        'model G_PI', 'model U_PI', 'model C_PI', 
+        'model BC', 'model BD', 'model BE'
+      ].includes(model)) {
+      // just calculate the offset by model
+      const offsetByModel = {
+        'model G_PI': 4,
+        'model U_PI': 4,
+        'model C_PI': 3,
+        'model BC': 6,
+        'model BD': 6,
+        'model BE': 7,
+      };
+      const offset = offsetByModel[model];
+
+      if (isNumeric(offset)) {
+        record[offset + 0] = valueOrInvalid(message.pm1p0);
+        record[offset + 1] = valueOrInvalid(message.pm2p5);
+        record[offset + 2] = valueOrInvalid(message.pm10p0);
+        record[offset + 3] = valueOrInvalid(message.pm1p0_cf1_a);
+        record[offset + 4] = valueOrInvalid(message.pm2p5_cf1_a);
+        record[offset + 5] = valueOrInvalid(message.pm10p0_cf1_a);
+        record[offset + 6] = valueOrInvalid(message.pm1p0_atm_a);
+        record[offset + 7] = valueOrInvalid(message.pm2p5_atm_a);
+        record[offset + 8] = valueOrInvalid(message.pm10p0_atm_a);
+        record[offset + 9] = valueOrInvalid(message.pm0p3_cpl_a);
+        record[offset + 10] = valueOrInvalid(message.pm0p5_cpl_a);
+        record[offset + 11] = valueOrInvalid(message.pm1p0_cpl_a);
+        record[offset + 12] = valueOrInvalid(message.pm2p5_cpl_a);
+        record[offset + 13] = valueOrInvalid(message.pm5p0_cpl_a);
+        record[offset + 14] = valueOrInvalid(message.pm10p0_cpl_a);
+        record[offset + 15] = valueOrInvalid(message.pm1p0_cf1_b);
+        record[offset + 16] = valueOrInvalid(message.pm2p5_cf1_b);
+        record[offset + 17] = valueOrInvalid(message.pm10p0_cf1_b);
+        record[offset + 18] = valueOrInvalid(message.pm1p0_atm_b);
+        record[offset + 19] = valueOrInvalid(message.pm2p5_atm_b);
+        record[offset + 20] = valueOrInvalid(message.pm10p0_atm_b);
+        record[offset + 21] = valueOrInvalid(message.pm0p3_cpl_b);
+        record[offset + 22] = valueOrInvalid(message.pm0p5_cpl_b);
+        record[offset + 23] = valueOrInvalid(message.pm1p0_cpl_b);
+        record[offset + 24] = valueOrInvalid(message.pm2p5_cpl_b);
+        record[offset + 25] = valueOrInvalid(message.pm5p0_cpl_b);
+        record[offset + 26] = valueOrInvalid(message.pm10p0_cpl_b);
+      }
     }
     else if (model === 'model K') {
       record[5] = valueOrInvalid(message.pm1p0);
@@ -1035,7 +1055,8 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   } else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model G_PI', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
-         'model AP', 'model AW', 'model AY', 'model BA', 'model BB'].indexOf(model) >= 0) {
+         'model AP', 'model AW', 'model AY', 'model BA', 'model BB', 
+         'model BC', 'model BD'].indexOf(model) >= 0) {
       if (!compensated && !instantaneous) {
         record[3] = valueOrInvalid(message['raw-instant-value']);
       }
@@ -1472,6 +1493,15 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[6] = valueOrInvalid(message['compensated-instant-tvoc']);
         record[7] = valueOrInvalid(message['compensated-instant-resistance']);
       }
+    } else {
+      const offsetByModel = {
+        'model BD': 5,
+        'model BE': 6,
+      };
+      const offset = offsetByModel[model];
+      if (isNumeric(offset)) {
+        record[offset] = valueOrInvalid(message['compensated-tvoc']);
+      }
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/presence") >= 0) {
     if (model === 'model AX') {
@@ -1577,10 +1607,11 @@ const getEggModelType = (dirname, extantTopics) => {
   const hasTemperature = extantTopics.indexOf("/orgs/wd/aqe/temperature") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/temperature/" + serialNumber) >= 0;
   const hasMagneticField = extantTopics.find(v => v.endsWith("magnetic_field")) || extantTopics.find(v => v.endsWith("magnetic_field/" + serialNumber));
   const hasFullParticulate = extantTopics.indexOf("/orgs/wd/aqe/full_particulate") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/full_particulate/" + serialNumber) >= 0;
+  const hasH2S = extantTopics.indexOf("/orgs/wd/aqe/h2s") >= 0 || extantTopics.indexOf("/orgs/wd/aqe/h2s/" + serialNumber) >= 0;
 
   const has = [
     hasNO2, hasCO, hasSO2, hasO3, hasParticulate, hasCO2, hasVOC, hasConductivity, hasPh, hasTurbidity,
-    hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField, hasDistance, hasFullParticulate
+    hasSoilMoisture, hasFuelgauge, hasThreshold, hasMagneticField, hasDistance, hasFullParticulate, hasH2S
   ].reverse();
   const modelCode = has.reduce((t, v) => {
     return t * 2 + (v ? 1 : 0);
@@ -1642,6 +1673,9 @@ const getEggModelType = (dirname, extantTopics) => {
     case             0b1000: return 'model AZ'; // o3-only
     case          0b1100001: return 'model BA'; // co2 + voc + no2
     case           0b100001: return 'model BB'; // co2 + no2
+    case 0b1000000000001101: return 'model BC'; // full_particulate + co2 + o3 + so2
+    case 0b11000000001100000: return 'model BD'; // full_particulate + co2 + h2s + voc
+    case 0b1000000001001101: return 'model BE'; // full_particulate + no2 + o3 + so2 + voc
     default:
       if (modelCode !== 0b0) {
         console.log(`Unexpected Model Code: 0b${modelCode.toString(2)}`);
@@ -1781,6 +1815,12 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery, hasAC) =
       return 11 + additionalFields; // time, temp, hum, co2, no2, eco2, voc, resistance, lat, lng, alt + [pressure]
     case 'model BB': // CO2 + NO2
       return 8 + additionalFields; // time, temp, hum, co2, no2, lat, lng, alt + [pressure]      
+    case 'model BC': // full_particulate + co2 + o3 + so2
+      return 37 + additionalFields; // time, temp, hum, co2, o3, so2, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
+    case 'model BD': // full_particulate + co2 + h2s + voc
+      return 37 + additionalFields; // time, temp, hum, co2, h2s, voc, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
+    case 'model BE': // full_particulate + no2 + o3 + so2 + voc
+      return 38 + additionalFields; // time, temp, hum, no2, o3, so2, voc, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
     default:
       return 6 + additionalFields;
   }
@@ -2013,6 +2053,15 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
     case "model BB":
       headerRow += "co2[ppm],no2[ppb]";
       break;
+    case "model BC": // time, temp, hum, co2, o3, so2, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
+      headerRow += "co2[ppm],o3[ppb],so2[ppb],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],pm1.0_cf1_a[ug/m^3],pm2.5_cf1_a[ug/m^3],pm10.0_cf1_a[ug/m^3],pm1.0_atm_a[ug/m^3],pm2.5_atm_a[ug/m^3],pm10.0_atm_a[ug/m^3],pm0.3_cpl_a[counts/L],pm0.5_cpl_a[counts/L],pm1.0_cpl_a[counts/L],pm2.5_cpl_a[counts/L],pm5.0_cpl_a[counts/L],pm10.0_cpl_a[counts/L],pm1.0_cf1_b[ug/m^3],pm2.5_cf1_b[ug/m^3],pm10.0_cf1_b[ug/m^3],pm1.0_atm_b[ug/m^3],pm2.5_atm_b[ug/m^3],pm10.0_atm_b[ug/m^3],pm0.3_cpl_b[counts/L],pm0.5_cpl_b[counts/L],pm1.0_cpl_b[counts/L],pm2.5_cpl_b[counts/L],pm5.0_cpl_b[counts/L],pm10.0_cpl_b[counts/L],exposure[#]";
+      break;
+    case "model BD": // time, temp, hum, co2, h2s, voc, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
+      headerRow += "co2[ppm],h2s[ppb],tvoc[ppb],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],pm1.0_cf1_a[ug/m^3],pm2.5_cf1_a[ug/m^3],pm10.0_cf1_a[ug/m^3],pm1.0_atm_a[ug/m^3],pm2.5_atm_a[ug/m^3],pm10.0_atm_a[ug/m^3],pm0.3_cpl_a[counts/L],pm0.5_cpl_a[counts/L],pm1.0_cpl_a[counts/L],pm2.5_cpl_a[counts/L],pm5.0_cpl_a[counts/L],pm10.0_cpl_a[counts/L],pm1.0_cf1_b[ug/m^3],pm2.5_cf1_b[ug/m^3],pm10.0_cf1_b[ug/m^3],pm1.0_atm_b[ug/m^3],pm2.5_atm_b[ug/m^3],pm10.0_atm_b[ug/m^3],pm0.3_cpl_b[counts/L],pm0.5_cpl_b[counts/L],pm1.0_cpl_b[counts/L],pm2.5_cpl_b[counts/L],pm5.0_cpl_b[counts/L],pm10.0_cpl_b[counts/L],exposure[#]";
+      break;            
+    case "model BE": // time, temp, hum, no2, o3, so2, voc, pm1p0, pm2p5, pm10p0, pm1p0_cf1_a, pm2p5_cf1_a, pm10p0_cf1_a, pm1p0_atm_a, pm2p5_atm_a, pm10p0_atm_a, pm0p3_cpl_a, pm0p5_cpl_a, pm1p0_cpl_a, pm2p5_cpl_a, pm5p0_cpl_a, pm10p0_cpl_a, pm1p0_cf1_b, pm2p5_cf1_b, pm10p0_cf1_b, pm1p0_atm_b, pm2p5_atm_b, pm10p0_atm_b, pm0p3_cpl_b, pm0p5_cpl_b, pm1p0_cpl_b, pm2p5_cpl_b, pm5p0_cpl_b, pm10p0_cpl_b, exposure, lat, lng, alt + [pressure]
+      headerRow += "no2[ppb],o3[ppb],so2[ppb],tvoc[ppb],pm1.0[ug/m^3],pm2.5[ug/m^3],pm10.0[ug/m^3],pm1.0_cf1_a[ug/m^3],pm2.5_cf1_a[ug/m^3],pm10.0_cf1_a[ug/m^3],pm1.0_atm_a[ug/m^3],pm2.5_atm_a[ug/m^3],pm10.0_atm_a[ug/m^3],pm0.3_cpl_a[counts/L],pm0.5_cpl_a[counts/L],pm1.0_cpl_a[counts/L],pm2.5_cpl_a[counts/L],pm5.0_cpl_a[counts/L],pm10.0_cpl_a[counts/L],pm1.0_cf1_b[ug/m^3],pm2.5_cf1_b[ug/m^3],pm10.0_cf1_b[ug/m^3],pm1.0_atm_b[ug/m^3],pm2.5_atm_b[ug/m^3],pm10.0_atm_b[ug/m^3],pm0.3_cpl_b[counts/L],pm0.5_cpl_b[counts/L],pm1.0_cpl_b[counts/L],pm2.5_cpl_b[counts/L],pm5.0_cpl_b[counts/L],pm10.0_cpl_b[counts/L],exposure[#]";
+      break;      
     case "model H": // base model
       headerRow = headerRow.slice(0, -1); // remove the trailing comma since ther are no additional fields
       break;
@@ -2166,6 +2215,9 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model AZ": ["", "temperature", "humidity", "o3", "latitude", "longitude", "altitude"],
       "model BA": ["", "temperature", "humidity", "co2", "no2", "eco2", "voc", "voc_raw", "latitude", "longitude", "altitude"],
       "model BB": ["", "temperature", "humidity", "co2", "no2", "latitude", "longitude", "altitude"],
+      "model BC": ["", "temperature", "humidity", "co2", "o3", "so2", "pm1p0", "pm2p5", "pm10p0", "pm1p0_cf1_a", "pm2p5_cf1_a", "pm10p0_cf1_a", "pm1p0_atm_a", "pm2p5_atm_a", "pm10p0_atm_a", "pm0p3_cpl_a", "pm0p5_cpl_a", "pm1p0_cpl_a", "pm2p5_cpl_a", "pm5p0_cpl_a", "pm10p0_cpl_a", "pm1p0_cf1_b", "pm2p5_cf1_b", "pm10p0_cf1_b", "pm1p0_atm_b", "pm2p5_atm_b", "pm10p0_atm_b", "pm0p3_cpl_b", "pm0p5_cpl_b", "pm1p0_cpl_b", "pm2p5_cpl_b", "pm5p0_cpl_b", "pm10p0_cpl_b", "exposure", "latitude", "longitude", "altitude"],
+      "model BD": ["", "temperature", "humidity", "co2", "h2s", "voc", "pm1p0", "pm2p5", "pm10p0", "pm1p0_cf1_a", "pm2p5_cf1_a", "pm10p0_cf1_a", "pm1p0_atm_a", "pm2p5_atm_a", "pm10p0_atm_a", "pm0p3_cpl_a", "pm0p5_cpl_a", "pm1p0_cpl_a", "pm2p5_cpl_a", "pm5p0_cpl_a", "pm10p0_cpl_a", "pm1p0_cf1_b", "pm2p5_cf1_b", "pm10p0_cf1_b", "pm1p0_atm_b", "pm2p5_atm_b", "pm10p0_atm_b", "pm0p3_cpl_b", "pm0p5_cpl_b", "pm1p0_cpl_b", "pm2p5_cpl_b", "pm5p0_cpl_b", "pm10p0_cpl_b", "exposure", "latitude", "longitude", "altitude"],
+      "model BE": ["", "temperature", "humidity", "no2", "o3", "so2", "voc", "pm1p0", "pm2p5", "pm10p0", "pm1p0_cf1_a", "pm2p5_cf1_a", "pm10p0_cf1_a", "pm1p0_atm_a", "pm2p5_atm_a", "pm10p0_atm_a", "pm0p3_cpl_a", "pm0p5_cpl_a", "pm1p0_cpl_a", "pm2p5_cpl_a", "pm5p0_cpl_a", "pm10p0_cpl_a", "pm1p0_cf1_b", "pm2p5_cf1_b", "pm10p0_cf1_b", "pm1p0_atm_b", "pm2p5_atm_b", "pm10p0_atm_b", "pm0p3_cpl_b", "pm0p5_cpl_b", "pm1p0_cpl_b", "pm2p5_cpl_b", "pm5p0_cpl_b", "pm10p0_cpl_b", "exposure", "latitude", "longitude", "altitude"],
       "unknown": ["", "temperature", "humidity", "latitude", "longitude", "altitude"]
     };
 
@@ -2224,6 +2276,9 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
       "model AZ": ["", tempUnits, "%", "ppb", "deg", "deg", "m"],
       "model BA": ["", tempUnits, "%", "ppm", "ppb", "ppm", "ppb", "ohms", "deg", "deg", "m"],
       "model BB": ["", tempUnits, "%", "ppm", "ppb", "deg", "deg", "m"],
+      "model BC": ["", tempUnits, "%", "ppm", "ppb", "ppb", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "#", "deg", "deg", "m"],
+      "model BD": ["", tempUnits, "%", "ppm", "ppb", "ppb", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "#", "deg", "deg", "m"],
+      "model BE": ["", tempUnits, "%", "ppb", "ppb", "ppb", "ppb", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "ug/m^3", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "counts/L", "#", "deg", "deg", "m"],
 
       "unknown": ["", tempUnits, "%", "deg", "deg", "m"]
     };
