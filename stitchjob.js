@@ -464,15 +464,21 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['raw-instant-value'] || message['raw-value']);
       }
     } else {
-      const offsetByModel = {
-        'model BA': 4,
-        'model BB': 4,
-        'model BE': 3,
-      }
-      const offset = offsetByModel[model];
-      if (isNumeric(offset)) {
-        record[offset] = valueOrInvalid(message['compensated-value']);
-      }
+      // const offsetByModel = {
+      //   'model BA': 4,
+      //   'model BB': 4,
+      //   'model BE': 3,
+      // }
+      // const offset = offsetByModel[model];
+      // if (isNumeric(offset)) {
+      //   record[offset] = valueOrInvalid(message['compensated-value']);
+      // }
+      if (job && job.HEADER_ROW) {
+        const idx = job.HEADER_ROW['no2[ppb]']?.idx;
+        if (idx >= 0) {
+          record[idx] = valueOrInvalid(message['compensated-value']);
+        }
+      }      
     } 
   } else if (message.topic.indexOf("/orgs/wd/aqe/so2") >= 0) {
     if (model === 'model B') {
@@ -642,7 +648,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       if (job && job.HEADER_ROW) {
         const idx = job.HEADER_ROW['so2[ppb]']?.idx;
         if (idx >= 0) {
-          record[idx] = valueOrInvalid(message.value);
+          record[idx] = valueOrInvalid(message['compensated-value']);
         }
       }
     }
@@ -873,13 +879,19 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (model === 'model AZ') {
       record[3] = valueOrInvalid(message['compensated-value']);
     } else {
-      const offsetByModel = {
-        'model BC': 4,
-        'model BE': 4,
-      }
-      const offset = offsetByModel[model];
-      if (isNumeric(offset)) {
-        record[offset] = valueOrInvalid(message['compensated-value']);      
+      // const offsetByModel = {
+      //   'model BC': 4,
+      //   'model BE': 4,
+      // }
+      // const offset = offsetByModel[model];
+      // if (isNumeric(offset)) {
+      //   record[offset] = valueOrInvalid(message['compensated-value']);      
+      // }
+      if (job && job.HEADER_ROW) {
+        const idx = job.HEADER_ROW['so2[ppb]']?.idx;
+        if (idx >= 0) {
+          record[idx] = valueOrInvalid(message['compensated-value']);
+        }
       }
     }
   } else if ((message.topic.indexOf("/orgs/wd/aqe/particulate") >= 0) || (message.topic.indexOf("/orgs/wd/aqe/full_particulate") >= 0)) {
@@ -908,7 +920,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     }
     else if ([
         'model G_PI', 'model U_PI', 'model C_PI', 
-        'model BC', 'model BD', 'model BE'
+        'model BC', 'model BD'
       ].includes(model)) {
       // just calculate the offset by model
       const offsetByModel = {
@@ -917,7 +929,6 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         'model C_PI': 3,
         'model BC': 6,
         'model BD': 6,
-        'model BE': 7,
       };
       const offset = offsetByModel[model];
 
@@ -1050,6 +1061,39 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[7] = valueOrInvalid(message.pm1p0);
       record[8] = valueOrInvalid(message.pm2p5);
       record[9] = valueOrInvalid(message.pm10p0);
+    } else {
+      if (job && job.HEADER_ROW) {
+        const idx = job.HEADER_ROW['pm1.0[ug/m^3]']?.idx;
+        if (idx >= 0) {
+          record[idx + 0] = valueOrInvalid(message.pm1p0);
+          record[idx + 1] = valueOrInvalid(message.pm2p5);
+          record[idx + 2] = valueOrInvalid(message.pm10p0);
+          record[idx + 3] = valueOrInvalid(message.pm1p0_cf1_a);
+          record[idx + 4] = valueOrInvalid(message.pm2p5_cf1_a);
+          record[idx + 5] = valueOrInvalid(message.pm10p0_cf1_a);
+          record[idx + 6] = valueOrInvalid(message.pm1p0_atm_a);
+          record[idx + 7] = valueOrInvalid(message.pm2p5_atm_a);
+          record[idx + 8] = valueOrInvalid(message.pm10p0_atm_a);
+          record[idx + 9] = valueOrInvalid(message.pm0p3_cpl_a);
+          record[idx + 10] = valueOrInvalid(message.pm0p5_cpl_a);
+          record[idx + 11] = valueOrInvalid(message.pm1p0_cpl_a);
+          record[idx + 12] = valueOrInvalid(message.pm2p5_cpl_a);
+          record[idx + 13] = valueOrInvalid(message.pm5p0_cpl_a);
+          record[idx + 14] = valueOrInvalid(message.pm10p0_cpl_a);
+          record[idx + 15] = valueOrInvalid(message.pm1p0_cf1_b);
+          record[idx + 16] = valueOrInvalid(message.pm2p5_cf1_b);
+          record[idx + 17] = valueOrInvalid(message.pm10p0_cf1_b);
+          record[idx + 18] = valueOrInvalid(message.pm1p0_atm_b);
+          record[idx + 19] = valueOrInvalid(message.pm2p5_atm_b);
+          record[idx + 20] = valueOrInvalid(message.pm10p0_atm_b);
+          record[idx + 21] = valueOrInvalid(message.pm0p3_cpl_b);
+          record[idx + 22] = valueOrInvalid(message.pm0p5_cpl_b);
+          record[idx + 23] = valueOrInvalid(message.pm1p0_cpl_b);
+          record[idx + 24] = valueOrInvalid(message.pm2p5_cpl_b);
+          record[idx + 25] = valueOrInvalid(message.pm5p0_cpl_b);
+          record[idx + 26] = valueOrInvalid(message.pm10p0_cpl_b);
+        }
+      }      
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/pressure") >= 0) {
     let pressureIndex = -7;
@@ -1511,14 +1555,20 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[7] = valueOrInvalid(message['compensated-instant-resistance']);
       }
     } else {
-      const offsetByModel = {
-        'model BD': 5,
-        'model BE': 6,
-      };
-      const offset = offsetByModel[model];
-      if (isNumeric(offset)) {
-        record[offset] = valueOrInvalid(message['compensated-tvoc']);
-      }
+      // const offsetByModel = {
+      //   'model BD': 5,
+      //   'model BE': 6,
+      // };
+      // const offset = offsetByModel[model];
+      // if (isNumeric(offset)) {
+      //   record[offset] = valueOrInvalid(message['compensated-tvoc']);
+      // }
+      if (job && job.HEADER_ROW) {
+        const idx = job.HEADER_ROW['tvoc[ppb]']?.idx;
+        if (idx >= 0) {
+          record[idx] = valueOrInvalid(message['compensated-tvoc']);
+        }
+      }      
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/presence") >= 0) {
     if (model === 'model AX') {
@@ -1569,9 +1619,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[componentStartIdx - 1] = inclination;
   }
 
-  if (model === 'model BE') {
-    console.log(message.topic, ' => ', JSON.stringify(record));
-  }
+  // if (model === 'model BE') {
+  //   console.log(message.topic, ' => ', JSON.stringify(record));
+  // }
 };
 
 const refineModelType = (modelType, data) => {
