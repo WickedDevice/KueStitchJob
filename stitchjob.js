@@ -628,6 +628,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       const offset = offsetByModel[model];
       if (isNumeric(offset)) {
         record[offset] = valueOrInvalid(message['compensated-value']);      
+        if (record[offset] === '---') {
+          console.log(JSON.stringify(message, null, 2));
+        }
       } else {
         console.error(`SO2 offset not established for Model "${model}"`);
       }
