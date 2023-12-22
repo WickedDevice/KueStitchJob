@@ -628,7 +628,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       const offset = offsetByModel[model];
       if (isNumeric(offset)) {
         record[offset] = valueOrInvalid(message['compensated-value']);      
-      }            
+      } else {
+        console.error(`SO2 offset not established for Model "${model}"`);
+      }
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/h2s") >= 0) {
     const offsetByModel = {
