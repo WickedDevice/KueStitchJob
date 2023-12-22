@@ -63,6 +63,7 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/co",
   "/orgs/wd/aqe/so2",
   "/orgs/wd/aqe/o3",
+  "/orgs/wd/aqe/h2s",
   "/orgs/wd/aqe/particulate",
   "/orgs/wd/aqe/co2",
   "/orgs/wd/aqe/voc",
