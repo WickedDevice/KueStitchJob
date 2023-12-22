@@ -888,7 +888,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       //   record[offset] = valueOrInvalid(message['compensated-value']);      
       // }
       if (job && job.HEADER_ROW) {
-        const idx = job.HEADER_ROW['so2[ppb]']?.idx;
+        const idx = job.HEADER_ROW['o3[ppb]']?.idx;
         if (idx >= 0) {
           record[idx] = valueOrInvalid(message['compensated-value']);
         }
