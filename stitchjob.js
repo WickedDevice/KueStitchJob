@@ -2165,7 +2165,8 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
 
   if (job) {
     job.HEADER_ROW = headerRow.split(',').map((v, idx) => { return {v, idx}});
-    job.HEADER_ROW = _.keyBy(job.HEADER_ROW, (v, idx) => v.v);
+    job.HEADER_ROW = _.keyBy(job.HEADER_ROW, (v) => v.v);
+    console.log(JSON.stringify(job.HEADER_ROW, null, 2));
   }
   await appendFileAsync(filepath, headerRow);
 };
