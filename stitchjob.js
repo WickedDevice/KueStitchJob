@@ -628,8 +628,6 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       const offset = offsetByModel[model];
       if (isNumeric(offset)) {
         record[offset] = valueOrInvalid(message['compensated-value']);      
-        console.log(JSON.stringify(message, null, 2));
-        console.log(JSON.stringify(record));
       } else {
         console.error(`SO2 offset not established for Model "${model}"`);
       }
@@ -1555,6 +1553,10 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[componentStartIdx - 3] = magnitude;
     record[componentStartIdx - 2] = azimuth;
     record[componentStartIdx - 1] = inclination;
+  }
+
+  if (model === 'model BE') {
+    console.log(message.topic, ' => ', JSON.stringify(record));
   }
 };
 
