@@ -3,6 +3,7 @@
 
 const promiseDoWhilst = require('promise-do-whilst');
 const kue = require('kue'), queue = kue.createQueue();
+const _ = require('lodash');
 
 const concurrency = 15;
 queue.setMaxListeners(queue.getMaxListeners() + concurrency);
@@ -160,7 +161,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
 
   record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(altitude);
   record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 5] = valueOrInvalid(longitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);  
 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/temperature") >= 0) {
@@ -224,6 +225,13 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[31] = valueOrInvalid(message.value);
     } else if (['model C_PI'].includes(model)) {
       record[30] = valueOrInvalid(message.value);
+    } else {      
+      if (job && job.HEADER_ROW) {
+        const idx = job.HEADER_ROW['exposure[#]']?.idx;
+        if (idx >= 0) {
+          record[idx] = valueOrInvalid(message.value);
+        }
+      }
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/aqi") >= 0) {
     let aqiSensors = [];
@@ -621,15 +629,21 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (model === 'model AY') {
       record[4] = valueOrInvalid(message['compensated-value']);
     } else {
-      const offsetByModel = {
-        'model BC': 4,
-        'model BE': 4,
-      }
-      const offset = offsetByModel[model];
-      if (isNumeric(offset)) {
-        record[offset] = valueOrInvalid(message['compensated-value']);      
-      } else {
-        console.error(`SO2 offset not established for Model "${model}"`);
+      // const offsetByModel = {
+      //   'model BC': 4,
+      //   'model BE': 4,
+      // }
+      // const offset = offsetByModel[model];
+      // if (isNumeric(offset)) {
+      //   record[offset] = valueOrInvalid(message['compensated-value']);      
+      // } else {
+      //   console.error(`SO2 offset not established for Model "${model}"`);
+      // }
+      if (job && job.HEADER_ROW) {
+        const idx = job.HEADER_ROW['so2[ppb]']?.idx;
+        if (idx >= 0) {
+          record[idx] = valueOrInvalid(message.value);
+        }
       }
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/h2s") >= 0) {
@@ -1707,7 +1721,7 @@ const getRecordLengthByModelType = (modelType, hasPressure, hasBattery, hasAC) =
   if (hasAC) {
     additionalFields++;
   }
-  additionalFields += 3;
+  additionalFields += 3; // lat, lng, alt
 
   switch (modelType) {
     case 'model A':
@@ -1885,7 +1899,7 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
   return jStat.mean(timeDiffs);
 };
 
-const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, hasBattery, hasAC) => {
+const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, hasBattery, hasAC, job) => {
   if (!temperatureUnits) {
     temperatureUnits = "???";
   }
@@ -2099,6 +2113,10 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
 
   // console.log(shouldIncludeTemperature, shouldIncludeHumidity, shouldIncludeAqiEtc, model, headerRow);
 
+  if (job) {
+    job.HEADER_ROW = headerRow.split(',').map((v, idx) => { return {v, idx}});
+    job.HEADER_ROW = _.keyBy(job.HEADER_ROW, (v, idx) => v.v);
+  }
   await appendFileAsync(filepath, headerRow);
 };
 
@@ -2647,9 +2665,9 @@ queue.process('stitch', concurrency, async (job, done) => {
           modelType = refineModelType(modelType, data);
           console.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
-
+          
           if (extension === 'csv') {
-            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery, hasAC);
+            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery, hasAC, job);
           }
           else if (extension === 'json' && (totalMessages > 0)) {
             await appendFileAsync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
