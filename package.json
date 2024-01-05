@@ -15,6 +15,7 @@
     "kue": "^0.11.6",
     "lodash": "^4.17.21",
     "moment": "^2.16.0",
+    "moment-timezone": "^0.5.44",
     "mongodb": "^2.2.36",
     "promise-do-whilst": "^1.0.1"
   }
