@@ -125,8 +125,18 @@ const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
   }
 };
 
-const addMessageToCalculatedRecord = (message, record, currentTemperatureUnits = 'C', job = {}) => {
-  const topic = message.topic.replace(`/${message['serial-number']}`, '');
+const addMessageToCalculatedRecord = (message, record, job = {}) => {
+  let topic = message.topic.replace(`/${message['serial-number']}`, '');
+  if (topic.includes('/')) {
+    topic = topic.split('/').slice(-1)[0];
+  }
+  
+  if (record.length === 1) {
+    for (const f of job.HEADING_DESCRIPTORS) {
+      record.push(invalid_value_string);
+    }
+  }
+
   let descriptors = job.KEYED_HEADING_DESCRIPTORS[topic] || [];
   const targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
 
@@ -135,14 +145,22 @@ const addMessageToCalculatedRecord = (message, record, currentTemperatureUnits =
   }
 
   for (const d of descriptors) {
-    const offset = d.idx;
+    const offset = d.idx + 1; // make room for timestamp
     if (isNumeric(offset)) {
       let value = message[d.field.jsonValueField];
       if (topic.includes('temperature')) {
         const reportedUnits = message[d.field.jsonUnitsField] || d.field.defaultUnits;
-        value = unitConvertTemperatureValueOrInvalid(value, reportedUnits, targetUnits);
+        value = +(unitConvertTemperatureValueOrInvalid(value, reportedUnits, targetUnits).toFixed(2));
       }
-      record[offset] = valueOrInvalid(value);
+      if (d.field.isNonNumeric) {
+        if (value && (typeof value === 'string')) {
+          record[offset] = value;
+        } else {
+          record[offset] = invalid_value_string;
+        }
+      } else {
+        record[offset] = valueOrInvalid(value);
+      }
     }
   }
 };
@@ -1964,6 +1982,8 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
     }
   });
 
+  timeDiffs = timeDiffs.filter(v => v !== 0);
+
   // determine the standard deviation of the time differences
   // filter out any that are outside 1 standard deviation from the mean
   const stdev = jStat.stdev(timeDiffs);
@@ -2005,41 +2025,55 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
     if (t) {
       descriptor = TOPIC_TO_MAPPING_DATA[t];
       if (descriptor) {
-        headingDescriptors.push(Object.assign({}, descriptor, {topic: t}));
+        headingDescriptors.push(Object.assign({}, {fields: descriptor}, {topic: t}));
       }
     }
   }
-
-  headingDescriptors.sort((a, b) => {
-    if (a.csvHeading < b.csvHeading) {
-      return -1;
-    } else if (a.csvHeading > b.csvHeading) {
-      return +1;
-    }
-    return 0;
-  });
 
   let flatHeadingDescriptors = [];
   let idx = 0;
   for (const hd of headingDescriptors) {
     let sub_idx = 0;
     // hd is an array of field descriptors
-    for (const f of hd) {
+    for (const f of hd.fields || []) {
       // we should establish the actual units based on data and fall back to defaults as needed
       let units;
       if (f.jsonValueField.includes('temperature') && temperatureUnits) {
         units = temperatureUnits; // because we'll convert to this
       } else {
-        units = data.find(d => d[f.jsonUnitsField]); 
+        units = data.find(d => d.topic?.includes(`/${hd.topic}/`) && d[f.jsonUnitsField])?.[f.jsonUnitsField]; 
       }
 
       units = units || f.defaultUnits;
-      headerRow += `,${f.csvHeading}[${units}]`;
-      flatHeadingDescriptors.push({field: f, idx, sub_idx, units});
+      flatHeadingDescriptors.push({field: Object.assign({}, f, {topic: hd.topic}), idx, sub_idx, units});
       idx++;
+      sub_idx++;
     }
   }
   
+  flatHeadingDescriptors.sort((a, b) => {
+    if (a.field?.topic < b.field?.topic) {
+      return -1;
+    } else if (a.field?.topic > b.field?.topic) {
+      return +1;
+    }
+
+    if (a.sub_idx < b.sub_idx) {
+      return -1;
+    } else if (a.sub_idx > b.sub_idx) {
+      return +1;
+    }
+
+    return 0;
+  });
+
+  idx = 0;
+  for (const f of flatHeadingDescriptors) {
+    f.idx = idx++;
+    // indexes should get remapped by this
+    headerRow += `,${f.field.csvHeading}[${f.units || 'n/a'}]`;
+  }
+
   headerRow += '\r\n';
 
   if (job) {
@@ -2294,7 +2328,8 @@ const getTemperatureUnits = (items) => {
 
 const convertCalculatedRecordToString = (record, job, format = 'csv', rowsWritten = -1) => {
   let r = record.slice();
-
+  const utcOffset = job.data.utcOffset;
+  
   if (moment(r[0]).isValid()) {
     if (format === 'csv') {
       r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
@@ -2801,7 +2836,7 @@ queue.process('stitch', concurrency, async (job, done) => {
           totalMessages += items.length;
           items.forEach((item) => {
             uniqueTopics[item.topic] = 1;
-            if ((item.topic.indexOf("temperature") >= 0) || item.topic.indexOf("battery") >= 0) {
+            if ((item.topic.indexOf("temperature") >= 0) || item.topic.indexOf("battery") || item.topic.indexOf("humidity") >= 0) {
               timebaseItems.push(item);
             }
             if (item.topic.indexOf("pressure") >= 0) {
@@ -2911,7 +2946,7 @@ queue.process('stitch', concurrency, async (job, done) => {
                       }
 
                       if (modelType === 'model XXX') {
-                        addMessageToCalculatedRecord(datum, currentRecord, currentTemperatureUnits, job);
+                        addMessageToCalculatedRecord(datum, currentRecord, job);
                       } else {
                         addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, currentTemperatureUnits, job);
                       }
@@ -2942,7 +2977,7 @@ queue.process('stitch', concurrency, async (job, done) => {
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
                       if (modelType === 'model XXX') {
-                        addMessageToCalculatedRecord(datum, currentRecord, currentTemperatureUnits, job);
+                        addMessageToCalculatedRecord(datum, currentRecord, job);
                       } else {
                         addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, 'C', job);
                       }
@@ -2977,7 +3012,11 @@ queue.process('stitch', concurrency, async (job, done) => {
           job.log(`Finished processing all JSON files, committing last record`);
           // make sure to commit the last record to file in whatever state it's in
           if (extension === 'csv') {
-            await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset));
+            if (modelType === 'model XXX') {
+              await appendFileAsync(outputFilePath, convertCalculatedRecordToString(currentRecord, job));
+            } else {
+              await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset));
+            }
 
             // as a last step here if the Egg is a thermote, then remove any columns from the CSV file
             // where there are no non-numeric values present, also prepend a record with the short code and alias
