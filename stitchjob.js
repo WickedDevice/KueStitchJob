@@ -17,6 +17,7 @@ const db = require('./db');
 
 const parse = require('csv-parse');
 const stringify = require('csv-stringify');
+const { TOPIC_TO_MAPPING_DATA } = require('./mappings');
 const promisify = require('util').promisify;
 const readFileAsync = promisify(fs.readFile);
 const parseAsync = promisify(parse);
@@ -120,6 +121,28 @@ const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
       } else {
         return v; // don't know how to convert that
       }
+    }
+  }
+};
+
+const addMessageToCalculatedRecord = (message, record, currentTemperatureUnits = 'C', job = {}) => {
+  const topic = message.topic.replace(`/${message['serial-number']}`, '');
+  let descriptors = job.KEYED_HEADING_DESCRIPTORS[topic] || [];
+  const targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
+
+  if (message['serial-number']) {
+    job.SERIAL_NUMBER = message['serial-number'];
+  }
+
+  for (const d of descriptors) {
+    const offset = d.idx;
+    if (isNumeric(offset)) {
+      let value = message[d.field.jsonValueField];
+      if (topic.includes('temperature')) {
+        const reportedUnits = message[d.field.jsonUnitsField] || d.field.defaultUnits;
+        value = unitConvertTemperatureValueOrInvalid(value, reportedUnits, targetUnits);
+      }
+      record[offset] = valueOrInvalid(value);
     }
   }
 };
@@ -1756,7 +1779,11 @@ const getEggModelType = (dirname, extantTopics) => {
         return 'model AV'; // this is the hydrostatic pressures sensor
       }
 
-      return 'model H'; // base model
+      if (hasTemperature && (modelCode === 0b0)) {
+        'model H'; // base model
+      }
+
+      return 'model XXX'; // undefined model
   }
 };
 
@@ -1903,7 +1930,8 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
   let timebaseTopic = null;
   const possibleTimeBaseTopicPrefixes = [
     '/orgs/wd/aqe/temperature',
-    '/orgs/wd/aqe/battery'
+    '/orgs/wd/aqe/battery',
+    '/orgs/wd/aqe/humidity'
   ];
 
   for(let ii = 0; (ii < possibleTimeBaseTopicPrefixes.length) && !timebaseTopic; ii++) {
@@ -1947,6 +1975,81 @@ const determineTimebase = (dirname, items, uniqueTopics) => {
 
   // recompute the mean
   return jStat.mean(timeDiffs);
+};
+
+const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopics, data, job) => {
+  if (!temperatureUnits) {
+    temperatureUnits = "???";
+  }
+
+  let headerRow = 'timestamp';
+
+  // data is an array of objects that look like this:
+  // {
+  //   topic: string;
+  //   timestamp: string;
+  //   ...other_fields depending on JSON message format
+  // }
+  // 
+  // the topic string might have a trailing /serial-number
+
+  let headingDescriptors = [];
+  for (let t of uniqueTopics) {
+    t = t.split('/');
+    let descriptor = null;
+    if (t.slice(-1)[0].startsWith('egg')) {
+      t = t.slice(-2)[0];
+    } else {
+      t = t.slice(-1)[0];
+    }
+    if (t) {
+      descriptor = TOPIC_TO_MAPPING_DATA[t];
+      if (descriptor) {
+        headingDescriptors.push(Object.assign({}, descriptor, {topic: t}));
+      }
+    }
+  }
+
+  headingDescriptors.sort((a, b) => {
+    if (a.csvHeading < b.csvHeading) {
+      return -1;
+    } else if (a.csvHeading > b.csvHeading) {
+      return +1;
+    }
+    return 0;
+  });
+
+  let flatHeadingDescriptors = [];
+  let idx = 0;
+  for (const hd of headingDescriptors) {
+    let sub_idx = 0;
+    // hd is an array of field descriptors
+    for (const f of hd) {
+      // we should establish the actual units based on data and fall back to defaults as needed
+      let units;
+      if (f.jsonValueField.includes('temperature') && temperatureUnits) {
+        units = temperatureUnits; // because we'll convert to this
+      } else {
+        units = data.find(d => d[f.jsonUnitsField]); 
+      }
+
+      units = units || f.defaultUnits;
+      headerRow += `,${f.csvHeading}[${units}]`;
+      flatHeadingDescriptors.push({field: f, idx, sub_idx, units});
+      idx++;
+    }
+  }
+  
+  headerRow += '\r\n';
+
+  if (job) {
+    job.HEADING_DESCRIPTORS = flatHeadingDescriptors; // includes ordering, and everything but the implied timestamp field  
+    job.KEYED_HEADING_DESCRIPTORS = _.groupBy(flatHeadingDescriptors, v => v.field.topic);
+    job.HEADER_ROW_ARRAY = headerRow.trim().split(',').map((v, idx) => { return {v, idx}});
+    job.HEADER_ROW = _.keyBy(job.HEADER_ROW_ARRAY, (v) => v.v); // creates, e.g. 'o3[ppb] => {v: 'o3[ppb]', idx: 4}
+    console.log(JSON.stringify(job.HEADER_ROW, null, 2));
+  }
+  await appendFileAsync(filepath, headerRow);
 };
 
 const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, hasBattery, hasAC, job) => {
@@ -2188,6 +2291,58 @@ const getTemperatureUnits = (items) => {
 //   fields: {field_key: field_value, ... },
 //   timestamp: Date
 // }
+
+const convertCalculatedRecordToString = (record, job, format = 'csv', rowsWritten = -1) => {
+  let r = record.slice();
+
+  if (moment(r[0]).isValid()) {
+    if (format === 'csv') {
+      r[0] = moment(r[0]).utcOffset(utcOffset).format("MM/DD/YYYY HH:mm:ss");
+      return r.join(",") + "\r\n";  
+    } else if (format === 'influx') {    
+      const influxRecord = {
+        measurement: 'egg_data',
+        tags: {},
+        fields: {},
+        timestamp: moment(r[0]).toDate()
+      };
+      let numNontrivialFields = 0;
+
+      for (const fd of job.HEADING_DESCRIPTORS) {
+        const d = fd.field;
+        const idx = fd.idx + 1;
+        const value = record[idx];
+        const units = fd.units;
+        const field = fd.field.influxValueField;        
+        if (d.isNonNumeric && (typeof r[i] === 'string')) {
+          influxRecord.tags[d.influxValueField] = r[i];
+          numNontrivialFields++;
+        } else if (isNumeric(r[idx])) {
+          influxRecord.fields[field] = +r[i];
+          if (units) {
+            influxRecord.tags[d.influxValueField] = units;
+          }
+          numNontrivialFields++;
+        }
+      }
+
+      if (numNontrivialFields) {
+        if (job.SERIAL_NUMBER) {
+          influxRecord.tags.serial_number = job.SERIAL_NUMBER;
+          if (rowsWritten > 0) {
+            return "," + JSON.stringify(influxRecord);
+          }
+          else {
+            return JSON.stringify(influxRecord);
+          }
+        }
+      }
+    }
+  }
+  
+  return ""; // if nothing else, still return a blank string
+};
+
 const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC, utcOffset, tempUnits = 'degC', format = 'csv', rowsWritten = -1, serial = "") => {
   let r = record.slice();
 
@@ -2718,7 +2873,11 @@ queue.process('stitch', concurrency, async (job, done) => {
           job.log(`Egg Serial Number ${dir} is ${modelType} type (refined)`);
           
           if (extension === 'csv') {
-            await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery, hasAC, job);
+            if (modelType === 'model XXX') {
+              await appendCalculatedHeaderRow(outputFilePath, job.data.temperatureUnits, uniqueTopics, data, job);
+            } else {
+              await appendHeaderRow(modelType, outputFilePath, job.data.temperatureUnits, hasPressure, hasBattery, hasAC, job);
+            }
           }
           else if (extension === 'json' && (totalMessages > 0)) {
             await appendFileAsync(`${job.data.save_path}/${dir}.json`, '['); // it's going to be an array of objects
@@ -2748,9 +2907,14 @@ queue.process('stitch', concurrency, async (job, done) => {
                     // if datum falls within current record, then just add it
                     if (timeToPreviousMessage < timeBase / 2) {
                       if (datum.topic.indexOf("temperature") >= 0) {
-                        currentTemperatureUnits = datum["converted-units"];
+                        currentTemperatureUnits = datum["converted-units"] || datum["units"];
                       }
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, currentTemperatureUnits, job);
+
+                      if (modelType === 'model XXX') {
+                        addMessageToCalculatedRecord(datum, currentRecord, currentTemperatureUnits, job);
+                      } else {
+                        addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, currentTemperatureUnits, job);
+                      }
                       // console.log(datum, currentRecord);
                     }
                     // if it doesn't, then append the stringified current record to the csv file
@@ -2759,17 +2923,29 @@ queue.process('stitch', concurrency, async (job, done) => {
                     else {
                       // if the record is non-trivial, add it
                       if (extension === 'csv') {
-                        await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset));
+                        if (modelType === 'model XXX') {                          
+                          await appendFileAsync(outputFilePath, convertCalculatedRecordToString(currentRecord, job));
+                        } else {
+                          await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset));
+                        }
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset));
                       }
                       else if (job.data.stitch_format === 'influx') {
-                        await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                        if (modelType === 'model XXX') { 
+                          await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertCalculatedRecordToString(currentRecord, job, 'influx', rowsWritten));
+                        } else {
+                          await appendFileAsync(`${job.data.save_path}/${dir}.json`, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, currentTemperatureUnits, 'influx', rowsWritten, job.data.serials[0]));
+                        }
                       }
                       rowsWritten++;
 
                       currentRecord = [];
                       currentRecord[0] = datum.timestamp;
-                      addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, 'C', job);
+                      if (modelType === 'model XXX') {
+                        addMessageToCalculatedRecord(datum, currentRecord, currentTemperatureUnits, job);
+                      } else {
+                        addMessageToRecord(datum, modelType, job.data.compensated, job.data.instantaneous, currentRecord, hasPressure, hasBattery, hasAC, 'C', job);
+                      }
                       // console.log(datum, currentRecord);
                     }
                     messagesProcessed++;
