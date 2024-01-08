@@ -1798,7 +1798,7 @@ const getEggModelType = (dirname, extantTopics) => {
       }
 
       if (hasTemperature && (modelCode === 0b0)) {
-        'model H'; // base model
+        return 'model H'; // base model
       }
 
       return 'model XXX'; // undefined model
