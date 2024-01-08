@@ -2052,6 +2052,45 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
   }
   
   flatHeadingDescriptors.sort((a, b) => {
+    // temperature is before everything
+    if (a.field?.topic === 'temperature' && b.field?.topic !== 'temperature') {
+      return -1;
+    } else if (a.field?.topic !== 'temperature' && b.field?.topic === 'temperature') {
+      return +1;
+    }
+    // NEITHER FIELD IS temperature or BOTH FIELDS ARE temperature
+    
+    // humidity is before everything else
+    if (a.field?.topic === 'humidity' && b.field?.topic !== 'humidity') {
+      return -1;
+    } else if (a.field?.topic !== 'humidity' && b.field?.topic === 'humidity') {
+      return +1;
+    }
+    // NEITHER FIELD IS humidity or BOTH FIELDS ARE humidity
+
+    // exposure is AFTER everything
+    if (a.field?.topic === 'exposure' && b.field?.topic !== 'exposure') {
+      return +1;
+    } else if (a.field?.topic !== 'exposure' && b.field?.topic === 'exposure') {
+      return -1;
+    }    
+    // NEITHER FIELD IS exposure or BOTH FIELDS ARE exposure
+
+    // exposure is AFTER but exposure
+    if (a.field?.topic === 'pressure' && b.field?.topic !== 'pressure') {
+      return +1;
+    } else if (a.field?.topic !== 'pressure' && b.field?.topic === 'pressure') {
+      return -1;
+    }        
+
+    // pm fields come after non-pm fields, except for pressure and exposure
+    if (a.field?.topic === 'full_particulate' && b.field?.topic !== 'full_particulate') {
+      return +1;
+    } else if (a.field?.topic !== 'full_particulate' && b.field?.topic === 'full_particulate') {
+      return -1;
+    }        
+
+
     if (a.field?.topic < b.field?.topic) {
       return -1;
     } else if (a.field?.topic > b.field?.topic) {
@@ -2071,7 +2110,12 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
   for (const f of flatHeadingDescriptors) {
     f.idx = idx++;
     // indexes should get remapped by this
-    headerRow += `,${f.field.csvHeading}[${f.units || 'n/a'}]`;
+    let targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
+    if (!f.field.influxValueField?.includes('temp')) {
+      // temperature like
+      targetUnits = '';
+    }
+    headerRow += `,${f.field.csvHeading}[${targetUnits || f.units || 'n/a'}]`;
   }
 
   headerRow += '\r\n';
@@ -2611,7 +2655,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
               const field = fields[j];
               influxRecord.fields[field] = influxRecord.fields[field] || +r[i];
               if (tag) {
-                influxRecord.tags[field + '_units'] = tag;
+                influxRecord.tags[field + '_units'] = tag; // FIXME: this should be the fallback method to a field-aware units mapping
               }
             }
           }
