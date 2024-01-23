@@ -36,11 +36,17 @@ const TOPIC_TO_MAPPING_DATA = {
     {csvHeading: 'co2', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co2', influxUnitsfield: 'co2_units', defaultUnits: 'ppm'},
   ],
   so2: [
-    {csvHeading: 'so2', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co2', influxUnitsfield: 'co2_units', defaultUnits: 'ppm'},
+    {csvHeading: 'so2', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co2', influxUnitsfield: 'so2_units', defaultUnits: 'ppb'},
   ],
   o3: [
-    {csvHeading: 'o3', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co2', influxUnitsfield: 'co2_units', defaultUnits: 'ppm'},
+    {csvHeading: 'o3', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co2', influxUnitsfield: 'o3_units', defaultUnits: 'ppb'},
   ],
+  no2: [
+    {csvHeading: 'no2', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'no2', influxUnitsfield: 'no2_units', defaultUnits: 'ppb'},
+  ],
+  co: [
+    {csvHeading: 'co', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co', influxUnitsfield: 'co_units', defaultUnits: 'ppm'},
+  ],  
   exposure: [
     {csvHeading: 'exposure', jsonValueField: 'value', jsonUnitsField: '', influxValueField: 'exposure', influxUnitsfield: '', defaultUnits: '#'},
   ],
