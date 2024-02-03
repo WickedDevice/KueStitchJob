@@ -158,7 +158,7 @@ const addMessageToCalculatedRecord = (message, record, job = {}) => {
     const offset = d.idx + 1; // make room for timestamp
     if (isNumeric(offset)) {
       let value = message[d.field.jsonValueField];
-      if (topic.includes('temperature')) {
+      if (topic.includes('temperature') || topic.includes('dewpoint')) {
         const reportedUnits = message[d.field.jsonUnitsField] || d.field.defaultUnits;
         value = +(unitConvertTemperatureValueOrInvalid(value, reportedUnits, targetUnits).toFixed(2));
       }
@@ -2121,7 +2121,7 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
     f.idx = idx++;
     // indexes should get remapped by this
     let targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
-    if (!f.field.influxValueField?.includes('temp')) {
+    if (!f.field.influxValueField?.includes('temp') && !f.field.influxValueField?.includes('dewpoint')) {
       // temperature like
       targetUnits = '';
     }
