@@ -87,6 +87,16 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/presence",
   "/orgs/wd/aqe/count",
   "/orgs/wd/aqe/full_particulate",
+
+  // weather forecast variables
+  "/orgs/wd/aqe/air_temperature",
+  "/orgs/wd/aqe/wind_chill",
+  "/orgs/wd/aqe/dewpoint",
+  "/orgs/wd/aqe/ultraviolet",
+  "/orgs/wd/aqe/precipitation",
+  "/orgs/wd/aqe/wind_speed",
+  "/orgs/wd/aqe/soil_temperature",
+  "/orgs/wd/aqe/insolation",
 ];
 
 const invalid_value_string = "---";
