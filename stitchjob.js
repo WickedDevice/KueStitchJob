@@ -158,7 +158,7 @@ const addMessageToCalculatedRecord = (message, record, job = {}) => {
     const offset = d.idx + 1; // make room for timestamp
     if (isNumeric(offset)) {
       let value = message[d.field.jsonValueField];
-      if (topic.includes('temperature') || topic.includes('dewpoint')) {
+      if ((topic.includes('temperature') || topic.includes('dewpoint')) && isNumeric(value)) {
         const reportedUnits = message[d.field.jsonUnitsField] || d.field.defaultUnits;
         value = +(unitConvertTemperatureValueOrInvalid(value, reportedUnits, targetUnits).toFixed(2));
       }
