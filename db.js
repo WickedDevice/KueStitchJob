@@ -20,7 +20,7 @@ var findDocuments = function(colxn, condition, options = {}) {
 
   // Get the documents collection
   return new Promise((resolve, reject) => {
-    var url = 'mongodb://localhost:27017/airqualityegg';
+    var url = 'mongodb://127.0.0.1:27017/airqualityegg';
     MongoClient.connect(url, function(err, db) {
       if(err){
         reject(err);
@@ -99,7 +99,7 @@ var updateDocument = function(colxn, condition, update, options = {}){
 
   // update ONE document in the collection
   return new Promise((resolve, reject) => {
-    var url = 'mongodb://localhost:27017/airqualityegg';
+    var url = 'mongodb://127.0.0.1:27017/airqualityegg';
     MongoClient.connect(url, function(err, db) {
       if(err){
         reject(err);
@@ -185,7 +185,7 @@ var deleteDocument = function(colxn, condition, options = {}){
   // delete ONE document in the collection
   return new Promise((resolve, reject) => {
     if(!errorMessage){
-      var url = 'mongodb://localhost:27017/airqualityegg';
+      var url = 'mongodb://127.0.0.1:27017/airqualityegg';
       MongoClient.connect(url, function(err, db) {
         if(err){
           reject(err);
@@ -226,7 +226,7 @@ var deleteDocument = function(colxn, condition, options = {}){
 
 function findDistinct(colxn, field) {
   return new Promise((resolve, reject) => {
-    var url = 'mongodb://localhost:27017/airqualityegg';
+    var url = 'mongodb://127.0.0.1:27017/airqualityegg';
     MongoClient.connect(url, function(err, db) {
       if(err){
         reject(err);

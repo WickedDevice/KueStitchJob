@@ -1,5 +1,5 @@
 const TOPIC_TO_MAPPING_DATA = {
-  // FORECAST VARIABLES
+  // FORECAST VARIABLES, keys here are qmtt topics
   humidity: [
     {csvHeading: 'humidity', jsonValueField: 'converted-value', jsonUnitsField: 'converted-units', influxValueField: 'humidity', influxUnitsfield: 'humidity_units', defaultUnits: '%'},
   ],
@@ -10,8 +10,15 @@ const TOPIC_TO_MAPPING_DATA = {
   wind_chill: [
     {csvHeading: 'wind chill', jsonValueField: 'value', jsonUnitsField: 'units', influxValueField: 'wind_chill', influxUnitsfield: 'wind_chill_units', defaultUnits: 'degC'},
   ],
+  dewpoint: [
+    {csvHeading: 'dew point', jsonValueField: 'value', jsonUnitsField: 'units', influxValueField: 'dewpoint_temperature', influxUnitsfield: 'dewpoint_units', defaultUnits: 'degC'},
+  ],  
+  ultraviolet: [
+    {csvHeading: 'ultraviolet', jsonValueField: 'value', jsonUnitsField: 'units', influxValueField: 'ultraviolet', influxUnitsfield: 'ultraviolet_units', defaultUnits: 'W/m²'},
+  ],    
   precipitation: [
     {csvHeading: 'precipitation', jsonValueField: 'value', jsonUnitsField: 'units', influxValueField: 'precipitation', influxUnitsfield: 'precipitation_units', defaultUnits: 'in'},
+    {csvHeading: 'precipitation_cum', jsonValueField: 'acc', jsonUnitsField: 'units', influxValueField: 'precipitation_acc', influxUnitsfield: 'precipitation_units', defaultUnits: 'in'},
   ],
   wind_speed: [
     {csvHeading: 'wind speed max', jsonValueField: 'max', jsonUnitsField: 'speed_units', influxValueField: 'wind_speed_max', influxUnitsfield: 'wind_speed_units', defaultUnits: 'mph'},
