@@ -1807,7 +1807,7 @@ const getEggModelType = (dirname, extantTopics) => {
         return 'model AV'; // this is the hydrostatic pressures sensor
       }
 
-      if (hasTemperature && (modelCode === 0b0)) {
+      if (hasTemperature && (modelCode === 0b0) && (extantTopics.length <= 3)) {
         return 'model H'; // base model
       }
 
