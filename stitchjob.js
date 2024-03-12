@@ -210,15 +210,9 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   let aqi = '---';
   let nowcast = '---';
 
-  if (model !== 'model XXX') {
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(altitude);
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 5] = valueOrInvalid(longitude);
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);  
-  } else if (job.HEADER_ROW_ARRAY){
-    record[job.HEADER_ROW_ARRAY.length] = valueOrInvalid(altitude);
-    record[job.HEADER_ROW_ARRAY.length + 1] = valueOrInvalid(longitude);
-    record[job.HEADER_ROW_ARRAY.length + 2] = valueOrInvalid(latitude);      
-  }
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(altitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 5] = valueOrInvalid(longitude);
+  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);  
 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/temperature") >= 0) {
