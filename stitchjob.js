@@ -154,6 +154,31 @@ const addMessageToCalculatedRecord = (message, record, job = {}) => {
     job.SERIAL_NUMBER = message['serial-number'];
   }
 
+  // does this message contain location data?
+  let latitude = null;
+  let longitude = null;
+  let altitude = null;
+
+  if (message.latitude && message.longitude) { // the old way
+    latitude = +message.latitude;
+    longitude = +message.longitude;
+  }
+  else if (message.__location && message.__location.lat && message.__location.lon) { // the new way
+    latitude = +message.__location.lat;
+    longitude = +message.__location.lon;
+  }
+
+  if (message.__location && message.__location.alt) { // the new way
+    altitude = +message.__location.alt;
+  }
+  else if (message.altitude) { // the old way
+    altitude = +message.altitude;
+  }
+
+  let latitudeIdx = job.HEADER_ROW?.['latitude[deg]']?.idx;
+  let longitudeIdx = job.HEADER_ROW?.['longitude[deg]']?.idx;
+  let altitudeIdx = job.HEADER_ROW?.['altitude[m]']?.idx;
+
   for (const d of descriptors) {
     const offset = d.idx + 1; // make room for timestamp
     if (isNumeric(offset)) {
@@ -170,6 +195,30 @@ const addMessageToCalculatedRecord = (message, record, job = {}) => {
         }
       } else {
         record[offset] = valueOrInvalid(value);
+      }
+      
+      if (latitudeIdx) {
+        if (latitude) {
+          record[latitudeIdx] = valueOrInvalid(latitude);
+        }  else {
+          record[latitudeIdx] = valueOrInvalid(null);
+        }
+      }
+
+      if (longitudeIdx) {
+        if (longitude) {
+          record[longitudeIdx] = valueOrInvalid(longitude);
+        }  else {
+          record[latitudeIdx] = valueOrInvalid(null);
+        }
+      }
+
+      if (altitudeIdx) {
+        if (altitude) {
+          record[altitudeIdx] = valueOrInvalid(altitude);        
+        } else {
+          record[altitudeIdx] = valueOrInvalid(null);
+        }
       }
     }
   }
@@ -2402,13 +2451,13 @@ const convertCalculatedRecordToString = (record, job, format = 'csv', rowsWritte
       for (const fd of job.HEADING_DESCRIPTORS) {
         const d = fd.field;
         const idx = fd.idx + 1;
-        const value = record[idx];
+        const value = r[idx];
         const units = fd.units;
         const field = fd.field.influxValueField;        
         if (d.isNonNumeric && (typeof r[i] === 'string')) {
           influxRecord.tags[d.influxValueField] = r[i];
           numNontrivialFields++;
-        } else if (isNumeric(r[idx])) {
+        } else if (isNumeric(value)) {
           influxRecord.fields[field] = +r[i];
           if (units) {
             influxRecord.tags[d.influxValueField] = units;
