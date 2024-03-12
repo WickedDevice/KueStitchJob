@@ -85,6 +85,9 @@ const TOPIC_TO_MAPPING_DATA = {
     {csvHeading: 'pm2.5_cpl_b', jsonValueField: 'pm2p5_cpl_b', jsonUnitsField: 'units', influxValueField: 'pm2p5_cpl_b', influxUnitsfield: 'pm_cpl_units', defaultUnits: 'counts/L'},
     {csvHeading: 'pm5.0_cpl_b', jsonValueField: 'pm5p0_cpl_b', jsonUnitsField: 'units', influxValueField: 'pm5p0_cpl_b', influxUnitsfield: 'pm_cpl_units', defaultUnits: 'counts/L'},
     {csvHeading: 'pm10.0_cpl_b', jsonValueField: 'pm10p0_cpl_b', jsonUnitsField: 'units', influxValueField: 'pm10p0_cpl_b', influxUnitsfield: 'pm_cpl_units', defaultUnits: 'counts/L'},
+  ],
+  voc: [
+    {csvHeading: 'voc', jsonValueField: 'compensated-tvoc', jsonUnitsField: 'tvoc-units', influxValueField: 'voc', influxUnitsfield: 'voc_units', defaultUnits: 'ppb'},
   ]
 };
 
