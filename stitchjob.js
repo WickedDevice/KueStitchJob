@@ -210,9 +210,15 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   let aqi = '---';
   let nowcast = '---';
 
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(altitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 5] = valueOrInvalid(longitude);
-  record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);  
+  if (model !== 'model XXX') {
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 4] = valueOrInvalid(altitude);
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 5] = valueOrInvalid(longitude);
+    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);  
+  } else if (job.HEADER_ROW){
+    record[job.HEADER_ROW.length] = valueOrInvalid(altitude);
+    record[job.HEADER_ROW.length + 1] = valueOrInvalid(longitude);
+    record[job.HEADER_ROW.length + 2] = valueOrInvalid(latitude);      
+  }
 
   // console.log("Model is: ", model);
   if (message.topic.indexOf("/temperature") >= 0) {
@@ -2127,6 +2133,8 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
     }
     headerRow += `,${f.field.csvHeading}[${targetUnits || f.units || 'n/a'}]`;
   }
+  
+  headerRow += `,latitude[deg],longitude[deg],altitude[m]`;
 
   headerRow += '\r\n';
 
