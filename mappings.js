@@ -53,6 +53,9 @@ const TOPIC_TO_MAPPING_DATA = {
   ],
   co: [
     {csvHeading: 'co', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'co', influxUnitsfield: 'co_units', defaultUnits: 'ppm'},
+  ],
+  h2s: [
+    {csvHeading: 'h2s', jsonValueField: 'compensated-value', jsonUnitsField: 'converted-units', influxValueField: 'h2s', influxUnitsfield: 'h2s_units', defaultUnits: 'ppb'},
   ],  
   exposure: [
     {csvHeading: 'exposure', jsonValueField: 'value', jsonUnitsField: '', influxValueField: 'exposure', influxUnitsfield: '', defaultUnits: '#'},
