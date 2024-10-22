@@ -3285,6 +3285,8 @@ const generateNextJob = (job) => {
       original_url: job.data.original_url,
       save_path: job.data.save_path,
       user_id: job.data.user_id,
+      aliases: job.data.aliases || {},
+      shortCodes: job.data.shortCodes || {},
       email: job.data.email,
       zipfilename: job.data.zipfilename,
       bypassjobs: job.data.bypassjobs ? job.data.bypassjobs.slice() : []
