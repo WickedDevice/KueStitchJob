@@ -2782,11 +2782,14 @@ queue.process('stitch', concurrency, async (job, done) => {
     // build the alias mapper
     for (const egg of eggs) {
       aliases[egg.serial_number] = egg.alias || egg.shortcode || egg.serial_number;
+      if (user?.aliases?.[egg.serial_number]) {
+        aliases[egg.serial_number] = user.aliases[egg.serial_number];
+      }
       shortCodes[egg.serial_number] = egg.shortcode || '';
       dbEggs[egg.serial_number] = {user, egg};
     }
 
-    aliases = Object.assign({}, aliases, user.aliases);
+    // aliases = Object.assign({}, aliases, user.aliases);
     // console.log(JSON.stringify(aliases, null, 2));
 
     // store the alias mapper in the job
