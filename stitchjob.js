@@ -306,7 +306,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (compensated && instantaneous) {
       record[2] = valueOrInvalid(message['converted-value']);
     }
-    record[2] = valueOrInvalid(+(record[2]?.toFixsed(2)));
+    record[2] = valueOrInvalid(+record[2]?.toFixed(2));
 
 
     if(isNumeric(record[1]) && isNumeric(record[2])) {
