@@ -3157,7 +3157,7 @@ queue.process('stitch', concurrency, async (job, done) => {
                     } else {
                       minByKey[k] = jStat.min(numericRows.map(v => +v[k]));
                       maxByKey[k] = jStat.max(numericRows.map(v => +v[k]));
-                      avgByKey[k] = jStat.max(numericRows.map(v => +v[k]));
+                      avgByKey[k] = +(jStat.mean(numericRows.map(v => +v[k])).toFixed(2));
                     }
                   });
 
