@@ -25,6 +25,8 @@ const stringifyAsync = promisify(stringify);
 const writeFileAsync = promisify(fs.writeFile);
 const appendFileAsync = promisify(fs.appendFile);
 
+console.log(`Node Version: ${process.version}`);
+
 /*
 function generateHeapDumpAndStats(){
   console.log("generateHeapDumpAndStats");
@@ -47,7 +49,7 @@ function generateHeapDumpAndStats(){
 setInterval(generateHeapDumpAndStats, 30000);
 */
 
-const modelsWithoutAqiNowcastHeatindex = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA', 'model AX'];
+const modelsWithoutAqiNowcastHeatindex = ['model H', 'model AR', 'model AT', 'model AU', 'model AV', 'model LA', 'model AX'];
 const modelsWithoutTemperature = ['model AR', 'model AT', 'model AU', 'model AV', 'model AX'];
 const modelsWithoutHumidity = ['model AR', 'model AT', 'model AU', 'model AV', 'model LA', 'model AX'];
 
@@ -1212,7 +1214,12 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[6] = valueOrInvalid(message.value);
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/battery") >= 0) {
-    record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 7] = valueOrInvalid(message['converted-value']);
+    let offset = getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 1;
+    offset -= 6; // back up past the lat,lng, alt fields
+    if (hasAC) {
+      offset--;  // back up past the hasAC field
+    }
+    record[offset] = valueOrInvalid(message['converted-value']);
   } else if (message.topic.indexOf("/orgs/wd/aqe/co2") >= 0) {
     if (['model D', 'model G', 'model G_PI', 'model M', 'model P',
          'model V', 'model AA', 'model AE', 'model AK',
@@ -2389,9 +2396,11 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
       headerRow += ",pressure_raw[mA]";
     }
   }
+
   if (hasBattery) {
     headerRow += ",battery[V]";
   }
+
   if (hasAC) {
     headerRow += ",ac[0/1]";
   }
@@ -3045,7 +3054,8 @@ queue.process('stitch', concurrency, async (job, done) => {
                     const timeToPreviousMessage = moment(datum.timestamp).diff(currentRecord[0], "milliseconds");
 
                     // if datum falls within current record, then just add it
-                    if (timeToPreviousMessage < timeBase / 2) {
+                    // if (timeToPreviousMessage < timeBase / 2) {
+                    if (Math.abs(timeToPreviousMessage) < 6000) { // lets just make an asssumption instead
                       if (datum.topic.indexOf("temperature") >= 0) {
                         currentTemperatureUnits = datum["converted-units"] || datum["units"];
                       }
@@ -3129,6 +3139,9 @@ queue.process('stitch', concurrency, async (job, done) => {
               try {
                 const csvData = await readFileAsync(outputFilePath, {encoding: 'utf8'});
                 const parsedCsv = await parseAsync(csvData, {columns: true});
+                const minByKey = {};
+                const maxByKey = {};
+                const avgByKey = {};
 
                 if (Array.isArray(parsedCsv) && (parsedCsv.length > 0)) {
                   const keys = Object.keys(parsedCsv[0]);
@@ -3141,6 +3154,10 @@ queue.process('stitch', concurrency, async (job, done) => {
                     const numericRows = parsedCsv.filter(v => isNumeric(v[k]));
                     if (numericRows.length === 0) {
                       purelyNonNumericKeys.push(k);
+                    } else {
+                      minByKey[k] = jStat.min(numericRows.map(v => +v[k]));
+                      maxByKey[k] = jStat.max(numericRows.map(v => +v[k]));
+                      avgByKey[k] = jStat.max(numericRows.map(v => +v[k]));
                     }
                   });
 
@@ -3155,7 +3172,7 @@ queue.process('stitch', concurrency, async (job, done) => {
                       if (k === 'timestamp') {
                         ret[k] = row[k];
                       } else if (purelyNonNumericKeys.indexOf(k) < 0) {
-                        ret[k] = row[k];
+                        ret[k] = row[k];                        
                       }
                     });
                     return ret;
@@ -3170,9 +3187,18 @@ queue.process('stitch', concurrency, async (job, done) => {
                   if (aliases[dir] && (aliases[dir] !== shortCodes[dir])) {
                     titleRow += `, \"${aliases[dir]}\"`;
                   }
-                  if (titleRow) {
+                  if (titleRow) { 
+                    const avgValues = await stringifyAsync([avgByKey], {header: true});
+                    const maxValues = await stringifyAsync([maxByKey], {header: true});
+                    const minValues = await stringifyAsync([minByKey], {header: true});
+                    const avgRow = `"Min",${avgValues.split(/[\r\n]+/)[1]}`;
+                    const maxRow = `"Max",${maxValues.split(/[\r\n]+/)[1]}`;
+                    const minRow = `"Avg",${minValues.split(/[\r\n]+/)[1]}`;
+                    newCsvStr = avgRow + '\n' + newCsvStr;
+                    newCsvStr = maxRow + '\n' + newCsvStr;
+                    newCsvStr = minRow + '\n' + newCsvStr;
                     newCsvStr = titleRow + '\n' + newCsvStr;
-                  }
+                  }                  
 
                   await writeFileAsync(outputFilePath, newCsvStr, {encoding: 'utf8'});
                 }
