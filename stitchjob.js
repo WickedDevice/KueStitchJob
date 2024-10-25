@@ -61,6 +61,7 @@ const getDirectories = (srcpath) => {
 const nonEPASensors = ['co2_aqi', 'pm1p0_aqi', 'voc_aqi'];
 const known_topic_prefixes = [
   "/orgs/wd/aqe/temperature",
+  "/orgs/wd/aqe/temperature3",
   "/orgs/wd/aqe/humidity",
   "/orgs/wd/aqe/exposure",
   "/orgs/wd/aqe/no2",

@@ -36,6 +36,11 @@ const TOPIC_TO_MAPPING_DATA = {
   temperature: [
     {csvHeading: 'temperature', jsonValueField: 'converted-value', jsonUnitsField: 'converted-units', influxValueField: 'temperature', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
   ],
+  temperature3: [
+    {csvHeading: 'temperature1', jsonValueField: 'temperature1', jsonUnitsField: 'units', influxValueField: 'temperature_1', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
+    {csvHeading: 'temperature2', jsonValueField: 'temperature2', jsonUnitsField: 'units', influxValueField: 'temperature_2', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
+    {csvHeading: 'temperature3', jsonValueField: 'temperature3', jsonUnitsField: 'units', influxValueField: 'temperature_3', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
+  ],
   pressure: [
     {csvHeading: 'pressure', jsonValueField: 'pressure', jsonUnitsField: 'pressure-units', influxValueField: 'pressure', influxUnitsfield: 'pressure_units', defaultUnits: 'Pa'},
   ],
