@@ -100,6 +100,8 @@ const known_topic_prefixes = [
   "/orgs/wd/aqe/wind_speed",
   "/orgs/wd/aqe/soil_temperature",
   "/orgs/wd/aqe/insolation",
+
+  "/orgs/wd/aqe/temperature3",
 ];
 
 const invalid_value_string = "---";

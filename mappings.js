@@ -96,6 +96,11 @@ const TOPIC_TO_MAPPING_DATA = {
   ],
   voc: [
     {csvHeading: 'voc', jsonValueField: 'compensated-tvoc', jsonUnitsField: 'tvoc-units', influxValueField: 'voc', influxUnitsfield: 'voc_units', defaultUnits: 'ppb'},
+  ],
+  temperature3: [
+    {csvHeading: 'temperature_1', jsonValueField: 'temperature_1', jsonUnitsField: 'units', influxValueField: 'temperature_1', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
+    {csvHeading: 'temperature_2', jsonValueField: 'temperature_2', jsonUnitsField: 'units', influxValueField: 'temperature_2', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
+    {csvHeading: 'temperature_3', jsonValueField: 'temperature_3', jsonUnitsField: 'units', influxValueField: 'temperature_3', influxUnitsfield: 'temperature_units', defaultUnits: 'degC'},
   ]
 };
 
