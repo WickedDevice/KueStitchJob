@@ -2190,8 +2190,10 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
     }
 
     let h = `${f.field.csvHeading}`;
-    if (job.dbEggs?.[serialNumber]?.sensorAliases?.[h]) {
-      h = `${job.dbEggs?.[serialNumber]?.sensorAliases?.[h]} ${h.replace(/_[0-9]+$/, '')}`;
+    const sensorAlias = job.dbEggs?.[serialNumber]?.sensorAliases?.[h.split(/\[.*/)[0]];
+    if (sensorAlias) {
+      let headingWithoutSuffix = `${h.replace(/_[0-9]+/, '')}`;
+      h = `${sensorAlias} ${headingWithoutSuffix}`;
     }
     headerRow += `,${h}[${targetUnits || f.units || 'n/a'}]`;
   }
