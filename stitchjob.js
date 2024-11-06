@@ -2085,10 +2085,12 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
   // the topic string might have a trailing /serial-number
 
   let headingDescriptors = [];
+  let serialNumber = '';
   for (let t of uniqueTopics) {
     t = t.split('/');
     let descriptor = null;
     if (t.slice(-1)[0].startsWith('egg')) {
+      serialNumber = t.slice(-1)[0];
       t = t.slice(-2)[0];
     } else {
       t = t.slice(-1)[0];
@@ -2186,7 +2188,12 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
       // temperature like
       targetUnits = '';
     }
-    headerRow += `,${f.field.csvHeading}[${targetUnits || f.units || 'n/a'}]`;
+
+    let h = `${f.field.csvHeading}`;
+    if (job.dbEggs?.[serialNumber]?.sensorAliases?.[h]) {
+      h = `${job.dbEggs?.[serialNumber]?.sensorAliases?.[h]} ${h.replace(/_[0-9]+$/, '')}`;
+    }
+    headerRow += `,${h}[${targetUnits || f.units || 'n/a'}]`;
   }
   
   headerRow += `,latitude[deg],longitude[deg],altitude[m]`;
@@ -2800,7 +2807,7 @@ queue.process('stitch', concurrency, async (job, done) => {
     // store the alias mapper in the job
     job.data.aliases = aliases;
     job.data.shortCodes = shortCodes;
-
+    job.dbEggs = dbEggs;
   } catch (e) {
     console.log(e.message || e, e.stack);
   }
