@@ -2774,6 +2774,7 @@ queue.process('stitch', concurrency, async (job, done) => {
   job.data.temperatureUnits = null;
 
   let aliases = {};
+  let unitPrefs = {};
   let shortCodes = {};
   let dbEggs = {};
   let user = {};
@@ -2794,13 +2795,33 @@ queue.process('stitch', concurrency, async (job, done) => {
     // console.log(eggs.map(v => v.alias));
 
     // build the alias mapper
+    const eggOwners = await db.findDocuments('Users', {name: {$in: eggs.map(v => v.owner).filter(v => !!v)}});
+    const eggOwnersByName = _.keyBy(eggOwners, v => v.name);
+
     for (const egg of eggs) {
+      const owner = eggOwnersByName[egg.owner];
+
       aliases[egg.serial_number] = egg.alias || egg.shortcode || egg.serial_number;
       if (user?.aliases?.[egg.serial_number]) {
         aliases[egg.serial_number] = user.aliases[egg.serial_number];
+      } else if (owner?.aliases?.[egg.serial_number]) {
+        aliases[egg.serial_number] = owner.aliases[egg.serial_number];
       }
       shortCodes[egg.serial_number] = egg.shortcode || '';
-      dbEggs[egg.serial_number] = {user, egg};
+      dbEggs[egg.serial_number] = {user, egg, owner};
+      
+      // if the egg has an owner adopt the units of the owner
+      // if user has a units field with units[serial_number] and it's °C or °F... use those units
+      // else if user.displayMetric then convert everything to °C
+      // else convert everything to °F
+      let targetUnits = '°F';
+      const _user = owner ? owner : user;
+      if (_user.units && ['°F', '°C'].includes(_user.units[egg.serial_number])) {
+        targetUnits = _user.units[egg.serial_number];
+      } else if (_user.displayMetric) {
+        targetUnits = '°C';
+      }
+      unitPrefs[egg.serial_number] = targetUnits;
     }
 
     // aliases = Object.assign({}, aliases, user.aliases);
@@ -2835,10 +2856,10 @@ queue.process('stitch', concurrency, async (job, done) => {
       try {
         if (user) {
           // if there's a setting about this egg specifically, then that takes precedence
-          if (user.units && user.units[dir]) {
-            if (['°F', 'degF'].includes(user.units[dir])) {
+          if (unitPrefs[dir]) {
+            if (['°F', 'degF'].includes(unitPrefs[dir])) {
               job.data.temperatureUnits = 'degF';
-            } else if (['°C', 'degC'].includes(user.units[dir])) {
+            } else if (['°C', 'degC'].includes(unitPrefs[dir])) {
               job.data.temperatureUnits = 'degC';
             }
           } else if (user.displayMetric === true) {
