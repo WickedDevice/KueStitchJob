@@ -296,7 +296,13 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (compensated && instantaneous) {
       record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'] || message.value, message['converted-units'], targetUnits);
     }
-    record[1] = valueOrInvalid(+record[1]?.toFixed(1));
+
+    const egg = job?.EGGS_BY_SERIAL?.[message['serial-number']];
+    if (egg?.productLine === 'air-quality-egg') {      
+      record[1] = valueOrInvalid(+record[1]?.toFixed(2)); // air quality eggs report two significant figures of temperature
+    } else {
+      record[1] = valueOrInvalid(+record[1]?.toFixed(1));
+    }
   } else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
     if (!compensated && !instantaneous) {
       record[2] = valueOrInvalid(message['raw-value']);
@@ -2790,6 +2796,8 @@ queue.process('stitch', concurrency, async (job, done) => {
       console.warn(e.message || e, e.stack);
     }
     eggs = eggs || [];
+    job.EGGS = eggs;
+    job.EGGS_BY_SERIAL = _.keyBy(eggs, v => v.serial_number);
 
     // console.log(user.aliases);
     // console.log(eggs.map(v => v.alias));
