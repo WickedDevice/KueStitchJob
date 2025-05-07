@@ -269,6 +269,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
   record[getRecordLengthByModelType(model, hasPressure, hasBattery, hasAC) - 6] = valueOrInvalid(latitude);  
 
   // console.log("Model is: ", model);
+  const egg = job?.EGGS_BY_SERIAL?.[message['serial-number']];
   if (message.topic.indexOf("/temperature") >= 0) {
     record[0] = message.timestamp;
     const targetUnits = job && job.data ? job.data.temperatureUnits : 'degC';
@@ -297,7 +298,6 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
       record[1] = unitConvertTemperatureValueOrInvalid(message['converted-value'] || message.value, message['converted-units'], targetUnits);
     }
 
-    const egg = job?.EGGS_BY_SERIAL?.[message['serial-number']];
     if (egg?.productLine === 'air-quality-egg') {      
       if (['eggfeedfacedeadbeef', 'eggdeadbeefdeadbeef'].includes(egg?.serial_number)) {
         record[1] = valueOrInvalid(+record[1]); // special behavior for calibration sensors, unlimited resolution
@@ -330,7 +330,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     if(isNumeric(record[1]) && isNumeric(record[2])) {
       let heatIndexObj = {};
       if(currentTemperatureUnits === 'degC') {
-        heatIndexObj  = util.calculateHeatIndexDegC(record[1], record[2],currentTemperatureUnits);
+        heatIndexObj  = util.calculateHeatIndexDegC(record[1], record[2], currentTemperatureUnits);
       } else {
         heatIndexObj  = util.calculateHeatIndexDegC(record[1], record[2], currentTemperatureUnits);
       }
