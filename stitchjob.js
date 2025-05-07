@@ -299,7 +299,11 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
 
     const egg = job?.EGGS_BY_SERIAL?.[message['serial-number']];
     if (egg?.productLine === 'air-quality-egg') {      
-      record[1] = valueOrInvalid(+record[1]?.toFixed(2)); // air quality eggs report two significant figures of temperature
+      if (['eggfeedfacedeadbeef', 'eggdeadbeefdeadbeef'].includes(egg?.serial_number)) {
+        record[1] = valueOrInvalid(+record[1]); // special behavior for calibration sensors, unlimited resolution
+      } else {
+        record[1] = valueOrInvalid(+record[1]?.toFixed(2)); // air quality eggs report two significant figures of temperature
+      }
     } else {
       record[1] = valueOrInvalid(+record[1]?.toFixed(1));
     }
@@ -316,7 +320,11 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     else if (compensated && instantaneous) {
       record[2] = valueOrInvalid(message['converted-value']);
     }
-    record[2] = valueOrInvalid(+record[2]?.toFixed(2));
+
+    if (!['eggfeedfacedeadbeef', 'eggdeadbeefdeadbeef'].includes(egg?.serial_number)) {
+      // special behavior for calibration sensors, unlimited resolution
+      record[2] = valueOrInvalid(+record[2]?.toFixed(2));
+    }
 
 
     if(isNumeric(record[1]) && isNumeric(record[2])) {
