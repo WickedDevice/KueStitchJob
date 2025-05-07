@@ -305,7 +305,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
         record[1] = valueOrInvalid(+record[1]?.toFixed(2)); // air quality eggs report two significant figures of temperature
       }
     } else {
-      record[1] = valueOrInvalid(+record[1]?.toFixed(1));
+      record[1] = valueOrInvalid(+record[1]?.toFixed(2));
     }
   } else if (message.topic.indexOf("/orgs/wd/aqe/humidity") >= 0) {
     if (!compensated && !instantaneous) {
