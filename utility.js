@@ -94,6 +94,24 @@ function cToF(degC) {
   return (degC * (9.0 / 5.0)) + 32;
 }
 
+
+/**
+ * Calculate Vapor Pressure Deficit (VPD).
+ *
+ * @param {number} temperatureC - Air temperature in °C.
+ * @param {number} relativeHumidity - Relative humidity in % (0-100).
+ * @returns {number} VPD in kPa.
+ */
+function calculateVPD(temperatureC, relativeHumidity) {
+    const saturationVaporPressure =
+        0.6108 * Math.exp((17.27 * temperatureC) / (temperatureC + 237.3));
+
+    const vaporPressureDeficit =
+        saturationVaporPressure * (1 - relativeHumidity / 100);
+
+    return vaporPressureDeficit;
+}
+
 module.exports = {
-  calculateHeatIndexDegC, calculateHeatIndexDegF
+  calculateHeatIndexDegC, calculateHeatIndexDegF, calculateVPD
 }
