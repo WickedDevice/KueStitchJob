@@ -20,7 +20,14 @@ if (!Array.isArray(eggTypes)) {
   eggTypes = [];
 }
 const eggTypesByID = _.keyBy(eggTypes, v => v.id);
-
+const eggTypesByIDWithDerivedSensorsByLabel = _.keyBy(_.cloneDeep(eggTypes).map(v => {  
+  if (!v.derivedSensors) {
+    v.derivedSensors = [];
+  }
+  const derivedSensorsByLabel = _.keyBy(v.derivedSensors, vv => vv.label);
+  v.derivedSensorsByLabel = derivedSensorsByLabel;
+  return v;
+}), v => v.id);
 
 const UCUM = require('@lhncbc/ucum-lhc');
 const ucum = UCUM.UcumLhcUtils.getInstance();
@@ -227,5 +234,6 @@ function calculateDerivedValues(eggType, row) {
 }
 
 module.exports = {
-  calculateHeatIndexDegC, calculateHeatIndexDegF, eggTypesByID, calculateDerivedValues, isNumeric, convertUnits, ucumifyUnits,
+  calculateHeatIndexDegC, calculateHeatIndexDegF, eggTypesByID, eggTypesByIDWithDerivedSensorsByLabel, 
+  calculateDerivedValues, isNumeric, convertUnits, ucumifyUnits,
 }
