@@ -140,6 +140,40 @@ const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
   }
 };
 
+const addDerivedDataToRecord = (record, job) => {
+  // check to see if derived values need to be added  
+  const eggType = util.eggTypesByIDWithDerivedSensorsByLabel[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+  const dSA = Array.isArray(eggType?.derivedSensors) ? eggType?.derivedSensors : [];
+  // turn the current record into a keyed row object
+  if (dSA.length > 0) {
+    const row = {};
+    for (let ii = 0; ii < record.length; ii++) {
+      const k = job.HEADER_ROW_KEYS[ii];
+      const kD = job.HEADER_ROW_BY_KEY[k];
+      row[k] = +record[ii];
+      row[`${k}_units`] = kD?.u;   
+    }
+    const dR = util.calculateDerivedValues(eggType, row);    
+    for (const k of _.keys(dR) || []) {
+      const label = k;
+      const kD = job.HEADER_ROW_BY_KEY[label];  
+      const outputIdx = kD?.idx;
+      // check to see if unit conversion is needed
+      if (dR?.[label].u !== kD.u) {
+        const dP = eggType.derivedSensorsByLabel[label]?.decimalPlaces;
+        let value = util.convertUnits(dR?.[label], kD?.u);
+        if (util.isNumeric(dP)) {
+          value = value?.toFixed(dP);
+        }
+        record[outputIdx] = valueOrInvalid(value);
+      } else {
+        const value = dR?.[label]?.v;
+        record[outputIdx] = valueOrInvalid(value);
+      }
+    }
+  }  
+}
+
 const addMessageToCalculatedRecord = (message, record, job = {}) => {
   let topic = message.topic.replace(`/${message['serial-number']}`, '');
   if (topic.includes('/')) {
@@ -227,6 +261,8 @@ const addMessageToCalculatedRecord = (message, record, job = {}) => {
       }
     }
   }
+
+  addDerivedDataToRecord(record, job);
 };
 
 const addMessageToRecord = (message, model, compensated, instantaneous, record, hasPressure, hasBattery, hasAC, currentTemperatureUnits = 'C', job = {}) => {
@@ -1757,9 +1793,7 @@ const addMessageToRecord = (message, model, compensated, instantaneous, record, 
     record[componentStartIdx - 1] = inclination;
   }
 
-  // if (model === 'model BE') {
-  //   console.log(message.topic, ' => ', JSON.stringify(record));
-  // }
+  addDerivedDataToRecord(record, job);
 };
 
 const refineModelType = (modelType, data) => {
@@ -2205,6 +2239,9 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
     return 0;
   });
 
+  // add derived fields if needed
+  
+
   idx = 0;
   for (const f of flatHeadingDescriptors) {
     f.idx = idx++;
@@ -2226,13 +2263,27 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
   
   headerRow += `,latitude[deg],longitude[deg],altitude[m]`;
 
+  // add derived fields as needed
+  const eggType = util.eggTypesByID[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+  const dSA = Array.isArray(eggType?.derivedSensors) ? eggType?.derivedSensors : [];
+  for (const dS of dSA) {
+    headerRow += `,${dS.label}[${dS.units === 'degC' ? temperatureUnits : dS.units}]`;
+  }
+
   headerRow += '\r\n';
 
   if (job) {
     job.HEADING_DESCRIPTORS = flatHeadingDescriptors; // includes ordering, and everything but the implied timestamp field  
     job.KEYED_HEADING_DESCRIPTORS = _.groupBy(flatHeadingDescriptors, v => v.field.topic);
-    job.HEADER_ROW_ARRAY = headerRow.trim().split(',').map((v, idx) => { return {v, idx}});
+    job.HEADER_ROW_KEYS = headerRow.split(',').map(v => v.split('[')[0]);
+    job.HEADER_ROW_ARRAY = headerRow.trim().split(',').map((v, idx) => { 
+      const parts = v.split(/[\[\]]/).filter(v => !!v);
+      const k = parts[0];
+      const u = parts[1];      
+      return {v, k, u, idx}
+    });
     job.HEADER_ROW = _.keyBy(job.HEADER_ROW_ARRAY, (v) => v.v); // creates, e.g. 'o3[ppb] => {v: 'o3[ppb]', idx: 4}
+    job.HEADER_ROW_BY_KEY = _.keyBy(job.HEADER_ROW_ARRAY, v => v.k);
     console.log(JSON.stringify(job.HEADER_ROW, null, 2));
   }
   await appendFileAsync(filepath, headerRow);
@@ -2450,13 +2501,28 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
   if (shouldIncludeAqiEtc) {
     headerRow += `,aqi,nowcast,heatindex[${temperatureUnits}]`;
   }
+
+  // add derived fields as needed
+  const eggType = util.eggTypesByID[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+  const dSA = Array.isArray(eggType?.derivedSensors) ? eggType?.derivedSensors : [];
+  for (const dS of dSA) {
+    headerRow += `,${dS.label}[${dS.units === 'degC' ? temperatureUnits : dS.units}]`;
+  }
+
   headerRow += '\r\n';
 
   // console.log(shouldIncludeTemperature, shouldIncludeHumidity, shouldIncludeAqiEtc, model, headerRow);
 
   if (job) {
-    job.HEADER_ROW = headerRow.split(',').map((v, idx) => { return {v, idx}});
-    job.HEADER_ROW = _.keyBy(job.HEADER_ROW, (v) => v.v);
+    job.HEADER_ROW_KEYS = headerRow.trim().split(',').map(v => v.split('[')[0]);
+    job.HEADER_ROW_ARRAY = headerRow.trim().split(',').map((v, idx) => { 
+      const parts = v.split(/[\[\]]/).filter(v => !!v);
+      const k = parts[0];
+      const u = parts[1];
+      return {v, k, u, idx}
+    });
+    job.HEADER_ROW_BY_KEY = _.keyBy(job.HEADER_ROW_ARRAY, v => v.k);
+    job.HEADER_ROW = _.keyBy(job.HEADER_ROW_ARRAY, (v) => v.v);
     console.log(JSON.stringify(job.HEADER_ROW, null, 2));
   }
   await appendFileAsync(filepath, headerRow);
@@ -2570,7 +2636,7 @@ const convertRecordToString = (record, modelType, hasPressure, hasBattery, hasAC
     }
 
     if (num_non_trivial_fields > 1) {
-      return r.join(",") + "\r\n";
+      return r.join(",");
     }
     else {
       return "";
@@ -2966,6 +3032,7 @@ queue.process('stitch', concurrency, async (job, done) => {
         const currentFile = firstPassAllFiles.shift();
         let serialNumber = dir.split("_");
         serialNumber = serialNumber[serialNumber.length - 1]; // the last part of the dirname
+        job.currentSerialNumber = serialNumber;
 
         // console.log(`currentFile: ${currentFile}, serialNumber: ${serialNumber}`);
 
@@ -3147,7 +3214,23 @@ queue.process('stitch', concurrency, async (job, done) => {
                         if (modelType === 'model XXX') {                          
                           await appendFileAsync(outputFilePath, convertCalculatedRecordToString(currentRecord, job));
                         } else {
-                          await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, pressureUnits));
+                          let str = convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, pressureUnits);
+                          if (str !== '') {
+                            const eggType = util.eggTypesByIDWithDerivedSensorsByLabel[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+                            const numDerivedFields = eggType?.derivedSensors?.length || 0;                            
+                            const lOff = str.split(',').length;
+                            for (let ii = 0; ii < numDerivedFields; ii++) {
+                              str += ',';
+                              if (currentRecord[lOff + ii] === undefined) {
+                                str += invalid_value_string;
+                              }
+                              else {
+                                str += valueOrInvalid(currentRecord[lOff + ii]);
+                              }      
+                            }                          
+                          }
+                          str += '\r\n';
+                          await appendFileAsync(outputFilePath, str);
                         }
                         // console.log(currentRecord, convertRecordToString(currentRecord, modelType, job.data.utcOffset, pressureUnits));
                       }
@@ -3201,7 +3284,23 @@ queue.process('stitch', concurrency, async (job, done) => {
             if (modelType === 'model XXX') {
               await appendFileAsync(outputFilePath, convertCalculatedRecordToString(currentRecord, job));
             } else {
-              await appendFileAsync(outputFilePath, convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, pressureUnits));
+              let str = convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, pressureUnits);
+              if (str !== '') {
+                const eggType = util.eggTypesByIDWithDerivedSensorsByLabel[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+                const numDerivedFields = eggType?.derivedSensors?.length || 0;                            
+                const lOff = str.split(',').length;
+                for (let ii = 0; ii < numDerivedFields; ii++) {
+                  str += ',';
+                  if (currentRecord[lOff + ii] === undefined) {
+                    str += invalid_value_string;
+                  }
+                  else {
+                    str += valueOrInvalid(currentRecord[lOff + ii]);
+                  }      
+                }                          
+              }
+              str += '\r\n';
+              await appendFileAsync(outputFilePath, str);
             }
 
             // as a last step here if the Egg is a thermote, then remove any columns from the CSV file
