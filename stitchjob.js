@@ -164,6 +164,8 @@ const addDerivedDataToRecord = (record, job) => {
         let value = util.convertUnits(dR?.[label], kD?.u);
         if (util.isNumeric(dP)) {
           value = value?.toFixed(dP);
+        } else {
+          value = value?.toFixed(2);
         }
         record[outputIdx] = valueOrInvalid(value);
       } else {
