@@ -141,8 +141,8 @@ const unitConvertTemperatureValueOrInvalid = (value, units, targetUnits) => {
 };
 
 const addDerivedDataToRecord = (record, job) => {
-  // check to see if derived values need to be added  
-  const eggType = util.eggTypesByIDWithDerivedSensorsByLabel[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+  // check to see if derived values need to be added    
+  const eggType = job.EGGS_BY_SERIAL[job.currentSerialNumber].eggType;
   const dSA = Array.isArray(eggType?.derivedSensors) ? eggType?.derivedSensors : [];
   // turn the current record into a keyed row object
   if (dSA.length > 0) {
@@ -2265,8 +2265,8 @@ const appendCalculatedHeaderRow = async (filepath, temperatureUnits, uniqueTopic
   
   headerRow += `,latitude[deg],longitude[deg],altitude[m]`;
 
-  // add derived fields as needed
-  const eggType = util.eggTypesByID[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+  // add derived fields as needed  
+  const eggType = job.EGGS_BY_SERIAL[job.currentSerialNumber].eggType;
   const dSA = Array.isArray(eggType?.derivedSensors) ? eggType?.derivedSensors : [];
   for (const dS of dSA) {
     headerRow += `,${dS.label}[${dS.units === 'degC' ? temperatureUnits : dS.units}]`;
@@ -2505,7 +2505,7 @@ const appendHeaderRow = async (model, filepath, temperatureUnits, hasPressure, h
   }
 
   // add derived fields as needed
-  const eggType = util.eggTypesByID[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+  const eggType = job.EGGS_BY_SERIAL[job.currentSerialNumber].eggType;
   const dSA = Array.isArray(eggType?.derivedSensors) ? eggType?.derivedSensors : [];
   for (const dS of dSA) {
     headerRow += `,${dS.label}[${dS.units === 'degC' ? temperatureUnits : dS.units}]`;
@@ -2886,7 +2886,26 @@ queue.process('stitch', concurrency, async (job, done) => {
     }
     eggs = eggs || [];
     job.EGGS = eggs;
-    job.EGGS_BY_SERIAL = _.keyBy(eggs, v => v.serial_number);
+    job.EGGS.forEach(v => {
+      v.eggType = _.cloneDeep(util.eggTypesByIDWithDerivedSensorsByLabel[v.egg_type_id || '']);
+      // delete any hidden sensors from the derived sensors
+      if (v.eggType) {
+        const dSensors = (v.eggType.derivedSensors || []);      
+        const newDerivedSensors = [];
+        for (let ii = 0; ii < dSensors.length; ii++) {
+          const dS = dSensors[ii];
+          let sensorIsHidden = v.hideSensors?.[dS.label];
+          sensorIsHidden ||= (v.hideSensors?.[dS.label] === undefined) && (dS.defaultShown === false);
+          if (sensorIsHidden) {
+            delete v.eggType.derivedSensorsByLabel[dS.label];
+          } else {
+            newDerivedSensors.push(dS);
+          }
+        }
+        v.eggType.derivedSensors = newDerivedSensors;
+      }
+    });
+    job.EGGS_BY_SERIAL = _.keyBy(job.EGGS, v => v.serial_number);
 
     // console.log(user.aliases);
     // console.log(eggs.map(v => v.alias));
@@ -3217,8 +3236,8 @@ queue.process('stitch', concurrency, async (job, done) => {
                           await appendFileAsync(outputFilePath, convertCalculatedRecordToString(currentRecord, job));
                         } else {
                           let str = convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, pressureUnits);
-                          if (str !== '') {
-                            const eggType = util.eggTypesByIDWithDerivedSensorsByLabel[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+                          if (str !== '') {                            
+                            const eggType = job.EGGS_BY_SERIAL[job.currentSerialNumber].eggType;
                             const numDerivedFields = eggType?.derivedSensors?.length || 0;                            
                             const lOff = str.split(',').length;
                             for (let ii = 0; ii < numDerivedFields; ii++) {
@@ -3287,8 +3306,8 @@ queue.process('stitch', concurrency, async (job, done) => {
               await appendFileAsync(outputFilePath, convertCalculatedRecordToString(currentRecord, job));
             } else {
               let str = convertRecordToString(currentRecord, modelType, hasPressure, hasBattery, hasAC, job.data.utcOffset, pressureUnits);
-              if (str !== '') {
-                const eggType = util.eggTypesByIDWithDerivedSensorsByLabel[job.EGGS_BY_SERIAL[job.currentSerialNumber]?.egg_type_id || ''];
+              if (str !== '') {                
+                const eggType = job.EGGS_BY_SERIAL[job.currentSerialNumber].eggType;
                 const numDerivedFields = eggType?.derivedSensors?.length || 0;                            
                 const lOff = str.split(',').length;
                 for (let ii = 0; ii < numDerivedFields; ii++) {
