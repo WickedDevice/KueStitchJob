@@ -3326,6 +3326,7 @@ queue.process('stitch', concurrency, async (job, done) => {
 
             // as a last step here if the Egg is a thermote, then remove any columns from the CSV file
             // where there are no non-numeric values present, also prepend a record with the short code and alias
+            // also remove aqi field if there is no pm2.5 field
             if (isThermote) {
               try {
                 const csvData = await readFileAsync(outputFilePath, {encoding: 'utf8'});
@@ -3336,6 +3337,13 @@ queue.process('stitch', concurrency, async (job, done) => {
 
                 if (Array.isArray(parsedCsv) && (parsedCsv.length > 0)) {
                   const keys = Object.keys(parsedCsv[0]);
+
+                  if (!keys.includes('pm2.5')) { // this is theoretical at this point
+                    parsedCsv.forEach(v => {
+                      delete v.aqi;
+                    });
+                  }
+
                   const purelyNonNumericKeys = [];
                   keys.forEach(k => {
                     if (k === 'timestamp') {
