@@ -3338,11 +3338,14 @@ queue.process('stitch', concurrency, async (job, done) => {
                 if (Array.isArray(parsedCsv) && (parsedCsv.length > 0)) {
                   const keys = Object.keys(parsedCsv[0]);
 
-                  if (!keys.includes('pm2.5')) { // this is theoretical at this point
-                    parsedCsv.forEach(v => {
-                      delete v.aqi;
-                    });
-                  }
+                  const noPm = keys.find(v => /pm/.test(v));
+                  parsedCsv.forEach(v => {
+                    delete v['heatindex[degF]']; // this is a legacy artifact
+                    delete v['heatindex[degC]']; // this is a legacy artifact
+                    if (!noPm) { // this is theoretical at this point
+                      delete v.aqi;                      
+                    }
+                  });
 
                   const purelyNonNumericKeys = [];
                   keys.forEach(k => {
