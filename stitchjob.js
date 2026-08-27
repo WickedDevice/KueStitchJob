@@ -3338,7 +3338,7 @@ queue.process('stitch', concurrency, async (job, done) => {
                 if (Array.isArray(parsedCsv) && (parsedCsv.length > 0)) {
                   const keys = Object.keys(parsedCsv[0]);
 
-                  const noPm = keys.find(v => /pm/.test(v));
+                  const noPm = keys.find(v => /pm2/.test(v));
                   parsedCsv.forEach(v => {
                     delete v['heatindex[degF]']; // this is a legacy artifact
                     delete v['heatindex[degC]']; // this is a legacy artifact
